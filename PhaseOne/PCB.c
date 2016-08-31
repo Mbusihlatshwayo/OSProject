@@ -10,7 +10,7 @@ void debugA(int a) {
 }
 
 /* Module global variables */ 
-HIDDEN pcb_t *p   pcbFree_h; // pointer to head of the free list
+HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free list
 
 
 

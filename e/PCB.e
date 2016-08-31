@@ -18,9 +18,9 @@ extern pcb_t *allocPcb();
 extern void initPcbs();
 
 extern pcb_t *mkEmptyProcQ();
-extern int emptyProcQ (pcb_t *p)
+extern int emptyProcQ (pcb_t *p);
 extern void insertProcQ (pcb_t **tp, pcb_t *p);
-extern pcb_t *removeProQ (pbc_t **tp);
+extern pcb_t *removeProQ (pcb_t **tp);
 extern pcb_t *outProcQ (pcb_t **tp, pcb_t *p);
 extern pcb_t *headProcQ (pcb_t *tp);
 

@@ -1,16 +1,60 @@
 /* PCB.c */
 
-#include "const.h"
-#include "types.h"
-#include "PCB.e"
+#include "../h/const.h"
+#include "../h/types.h"
+#include "../e/PCB.e"
 
 void debugA(int a) {
 	int i;
 	i=0;
 }
 
-/* module global variables */ 
-HIDDEN pcb_t *pcbFree_h; // pointer to head of the free list
+/* Module global variables */ 
+HIDDEN pcb_t *p   pcbFree_h; // pointer to head of the free list
+
+
+
+
+//Allocation & Deallocation of ProBlk's
+void freePcb(pcb_t *p){
+	// uses InsertProQ
+
+}
+
+ /**************************************************************************** 
+ *
+ * pcb_t *allocPcb(){
+ * 
+ * Uses removeProQ
+ * 
+ * }
+ * 
+ ****************************************************************************/
+
+/**************************************************************************** 
+ *
+ * void initPcbs() {
+ * 
+ * Uses MkEmptyProcQ
+ * 
+ * This is in video 5 
+ * 
+ * }
+ * 
+ ****************************************************************************/
+ 
+ 
+ 
+ 
+ 
+ 
+ //Process Queue Maintenance
+ 
+pcb_t *mkEmptyProcQ (){
+	
+	return(NULL);
+}
+
 
 /**************************************************************************** 
  *
@@ -27,77 +71,29 @@ HIDDEN pcb_t *pcbFree_h; // pointer to head of the free list
  *
  *  insertProQ (pcb_t **tp, pcb_t *p) {
  * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
- 
-
-// the process queue module:
-// a set of functions used to implement queues of process
-void freePcb(pcb_t *p){
-	// function: freePcb
-	// purpose: return the process block pointed to by p into the procFree list
-	// the list pointed to by pcbFree_h is updated
-
-}
-
-/**************************************************************************** 
- *
- * pcb_t mkEmptyProcQ (){
- * 
- * 
+ * Uses emptyProcQ
  * 
  * }
  * 
  ****************************************************************************/
+
  
  /**************************************************************************** 
  *
  * pcb_t *removeProcQ(pcb_t **tp {
  * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
- 
- /**************************************************************************** 
- *
- * pcb_t *allocPcb(){
- * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
-
-/**************************************************************************** 
- *
- * void initPcbs() {
- * 
- * 
+ * Uses emptyProcQ
  * 
  * }
  * 
  ****************************************************************************/
  
-  /**************************************************************************** 
- *
- * pcb_t *removeProcQ(pcb_t **tp){
- * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
  
   /**************************************************************************** 
  *
  * pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
  * 
- * 
+ * Uses EmptyProcQ and RemoveProcQ
  * 
  * }
  * 
@@ -114,6 +110,9 @@ void freePcb(pcb_t *p){
  ****************************************************************************/
 
 
+
+
+//Process Tree Maintenance
  /**************************************************************************** 
  *
  * int emptyChild(pcb_t *p){

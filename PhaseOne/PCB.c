@@ -1,4 +1,4 @@
-/* PCB.c */
+///////////////////////* PCB.c *///////////////////////
 
 #include "../h/const.h"
 #include "../h/types.h"
@@ -10,7 +10,7 @@ void debugA(int a) {
 }
 
 /* Module global variables */ 
-HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free list
+HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free singlely-linked list
 
 
 
@@ -30,18 +30,26 @@ void freePcb(pcb_t *p){
  * }
  * 
  ****************************************************************************/
+ 
+void initPcbs() {
 
-/**************************************************************************** 
- *
- * void initPcbs() {
- * 
- * Uses MkEmptyProcQ
- * 
- * This is in video 5 
- * 
- * }
- * 
- ****************************************************************************/
+//Uses MkEmptyProcQ OR pcbFree_h = NULL;
+//This is in video 5 
+
+	//int count = 20;
+
+	static pcb_t procTable[20];
+	
+	for(int i=0; i< MAXPROC; i++)
+	{
+		freePcb(&(procTable[i]));
+	}
+	
+
+
+ 
+}
+ 
  
  
  
@@ -72,6 +80,7 @@ pcb_t *mkEmptyProcQ (){
  *  insertProQ (pcb_t **tp, pcb_t *p) {
  * 
  * Uses emptyProcQ
+ * This has 3 cases and is an enqueue
  * 
  * }
  * 
@@ -83,6 +92,7 @@ pcb_t *mkEmptyProcQ (){
  * pcb_t *removeProcQ(pcb_t **tp {
  * 
  * Uses emptyProcQ
+ * This has 3 cases and is an dequeue
  * 
  * }
  * 
@@ -99,15 +109,16 @@ pcb_t *mkEmptyProcQ (){
  * 
  ****************************************************************************/
  
-  /**************************************************************************** 
- *
- * pcb_t *headProcQ(pcb_t *tp){
- * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
+pcb_t *headProcQ(pcb_t *tp){
+ 
+	if(!emptyProcQ(tp))
+	{
+		return (tp->p_next);
+	}
+	
+	return  NULL;
+ 
+}
 
 
 
@@ -117,7 +128,7 @@ pcb_t *mkEmptyProcQ (){
  *
  * int emptyChild(pcb_t *p){
  * 
- * 
+ * Returns T/F
  * 
  * }
  * 
@@ -127,7 +138,8 @@ pcb_t *mkEmptyProcQ (){
  *
  * void insertChild(pcb_t *prnt, pcb_t *p){
  * 
- * 
+ * Purpose: Parent now has another child
+ * Treated as a stack (use p_sib for this)
  * 
  * }
  * 

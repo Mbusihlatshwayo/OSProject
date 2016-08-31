@@ -69,6 +69,26 @@ typedef struct pcb_t {
 	
 } pcb_t;
 
+
+
+
+
+/**************************************************************************** 
+ *
+ * //semaphore descriptor type//
+ * typedef struct semd_t {
+ * 
+ * 
+ * 
+ * }
+ * 
+ ****************************************************************************/
+
+
+
+
+
+
 #define	s_at	s_reg[0]
 #define	s_v0	s_reg[1]
 #define s_v1	s_reg[2]

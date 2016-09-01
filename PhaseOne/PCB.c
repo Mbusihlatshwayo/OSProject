@@ -10,14 +10,15 @@ void debugA(int a) {
 }
 
 /* Module global variables */ 
-HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free singlely-linked list
-
-
+//HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free singlely-linked list
+//HIDDEN pcb_PTR
+HIDDEN pcb_t *freePcb_tp;
 
 
 //Allocation & Deallocation of ProBlk's
 void freePcb(pcb_t *p){
 	// uses InsertProQ
+	
 
 }
 
@@ -64,27 +65,36 @@ pcb_t *mkEmptyProcQ (){
 }
 
 
-/**************************************************************************** 
- *
- * int emptyProQ(pcb_t *tp){
- * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
+/****************************************************************************/
+int emptyProcQ (pcb_t *tp){
+	return (tp == NULL); 
+}
+ /****************************************************************************/
 
 
-/**************************************************************************** 
- *
- *  insertProQ (pcb_t **tp, pcb_t *p) {
- * 
- * Uses emptyProcQ
- * This has 3 cases and is an enqueue
- * 
- * }
- * 
- ****************************************************************************/
+/****************************************************************************/
+ 
+ void insertProQ (pcb_t **tp, pcb_t *p) {
+
+	// if the procq is empty
+	if(emptyProcQ(*tp)){
+		(*tp) = p;
+		p->p_next = p; //This can't be null because it will throw and error for the next conditional
+		p->p_previous = p;
+	}
+	// if procq has at least one PCB
+	else{
+		p->p_next = (*tp)->p_next; 
+		(*tp)->p_next = p;
+		(p->p_next)->p_previous = p;
+		p->p_previous = (*tp);
+		(*tp) = p;
+	}
+
+
+}
+  
+ /****************************************************************************/
 
  
  /**************************************************************************** 

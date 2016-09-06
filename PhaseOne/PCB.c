@@ -9,116 +9,191 @@ void debugA(int a) {
 	i=0;
 }
 
-/* Module global variables */ 
+//////////////////Module global variables//////////////////
+
 //HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free singlely-linked list
 //HIDDEN pcb_PTR
-HIDDEN pcb_t *freePcb_tp;
+HIDDEN pcb_t *pcbList_tp;
+//pcb_PTR pcbList_h;
 
 
-//Allocation & Deallocation of ProBlk's
+//////////////////Allocation & Deallocation of ProBlk's//////////////////
+
+//Insert the element pointed to by p onto the pcbFree list
 void freePcb(pcb_t *p){
-	// uses InsertProQ
-	
+	insertProQ(*pcbList_tp, p);
+	//Check this
 
 }
 
- /**************************************************************************** 
- *
- * pcb_t *allocPcb(){
- * 
- * Uses removeProQ
- * 
- * }
- * 
- ****************************************************************************/
+//Return Null if PCBFree list is empty. Otherwise, remove an element from PCBfree list, provide initial values for all fields (Null/0) and return a pointer to removed element.
+pcb_t *allocPcb(){
+	//Check this
+	
+	// if the procQ is empty 
+	if(emptyProcQ(pcbList_tp)){
+		return(NULL);
+	}
+	else
+	{
+		pcb_t *removedElement = removeProcQ(*pcbList_tp);
+		removedElement->p_next = NULL; //Question: Would this loop to itself like InsertProcQ does?
+		removedElement->p_previous = NULL;
+		removedElement->p_prnt = NULL;
+		removedElement->p_child = NULL;
+		removedElement->p_sib = NULL;
+		
+		//Question: What about p_s & p_semAdd
+		
+		return removedElement;
+	}
+
+}
  
+//Initialize the pcbFree list to contain all the elements of the static array of MAXPROC ProbBlk's. This is called only once 
 void initPcbs() {
 
-//Uses MkEmptyProcQ OR pcbFree_h = NULL;
-//This is in video 5 
+	static pcb_t procTable[MAXPROC];
 
-	//int count = 20;
-
-	static pcb_t procTable[20];
-	
-	for(int i=0; i< MAXPROC; i++)
-	{
-		freePcb(&(procTable[i]));
+	pcbList_tp = mkEmptyProcQ();
+	for(int i = 0; i < MAXPROC; i++){
+		freePcb(&procTable[i]);
 	}
-	
-
-
  
 }
  
  
- 
- 
- 
- 
- 
- //Process Queue Maintenance
- 
+//////////////////Process Queue Maintenance//////////////////
+
+
+//Initialize a variable to be a tail pointer to a process queue 
 pcb_t *mkEmptyProcQ (){
-	
 	return(NULL);
 }
 
-
-/****************************************************************************/
+//Return T if tp is empty, else return F
 int emptyProcQ (pcb_t *tp){
 	return (tp == NULL); 
 }
- /****************************************************************************/
 
-
-/****************************************************************************/
- 
- void insertProQ (pcb_t **tp, pcb_t *p) {
+//Insert the ProcBlk pointed to by p into the process queue.
+void insertProQ (pcb_t **tp, pcb_t *p) {
 
 	// if the procq is empty
 	if(emptyProcQ(*tp)){
-		(*tp) = p;
-		p->p_next = p; //This can't be null because it will throw and error for the next conditional
+		// the next/previous nodes for the current node, is also the current node
+		p->p_next = p; 
 		p->p_previous = p;
+		
+		// the first node is also the tail pointer
+		(*tp) = p;
 	}
 	// if procq has at least one PCB
 	else{
-		p->p_next = (*tp)->p_next; 
-		(*tp)->p_next = p;
-		(p->p_next)->p_previous = p;
+		// initialize pointers for the new node to be inserted
+		p->p_next = (*tp)->p_next; // the new nodes next value is set to the first element 
+		p->p_next->p_previous = p; // the previous value of the first node is set to the new node
 		p->p_previous = (*tp);
+		// initialize the new tail pointer
+		(*tp)->p_next = p;
 		(*tp) = p;
-	}
-
+	} 
 
 }
-  
- /****************************************************************************/
 
+//Remove the head element from process queue and return a pointer to that removed element.
+ pcb_t *removeProcQ(pcb_t **tp) { //Question: This has an error
+	 
+	// if the procQ is empty 
+	if(emptyProcQ(*tp)){
+		return(NULL);
+	}
+	//if the ProcQ only has 1 node
+	else if((*tp)->p_next == *tp){
+		pcb_t *headPCB = *tp;
+		*tp = mkEmptyProcQ(); //update tp to be removed
+		return(headPCB);
+	}
+	//if the ProcQ has 2+ nodes
+	else{
+		pcb_t *headPCB = (*tp)->p_next; //set value of node going to be removed and returned.
+		(*tp)->p_next = (headPCB->p_next); //set tp's next value as the new head of the list. Question: Can I use headPCB to see
+		(headPCB->p_next)->p_previous = *tp; //set previous of new head to be the tail pointer	
+		
+		return(headPCB);
+		
+	}
+ }
  
- /**************************************************************************** 
- *
- * pcb_t *removeProcQ(pcb_t **tp {
- * 
- * Uses emptyProcQ
- * This has 3 cases and is an dequeue
- * 
- * }
- * 
- ****************************************************************************/
+//Remove the ProcBlk pointed to by p from the process queue. Update queue based on p's location in queue (ie fix next and previous stuff)
+pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
+	
+	// if the procq is empty
+	if(emptyProcQ(*tp)){	
+		return(NULL);
+	}
+	
+	//if procq has only 1 node
+	else if (*tp)->p_next == *tp){
+		if(*tp == p){
+			pcb_t removedNode = *tp;
+			mkEmptyProcQ(*tp);
+			return removedNode;
+		}
+		else{
+			return(NULL);
+		}
+	}
+	
+	//if procq has 2+ nodes
+	else{
+		
+		//If p is the tail pointer
+		if(*tp == p){
+			
+			pcb_t *removedNode = (*tp); //set value of node going to be removed and returned.
+			
+			(*tp) = (removedNode->p_previous);
+			(*tp)->p_previous = (removedNode->p_previous); 
+			((*tp)->p_next)->p_previous = *tp;
+			
+			return(removedNode);
+		}
+		
+		//If p is the head pointer
+		else if (p == (*tp)->p_next){
+			return removeProcQ(*tp);
+			
+		}
+		
+		//Else p is the middle 
+		else{
+			
+			pcb_t *loopNode = ((*tp)->p_next);
+			
+			while(loopNode != *tp)
+			{
+				
+				if(loopNode == p)
+				{
+					
+					(p->p_next)->p_previous(p->p_previous);
+					(p->previous)->p_next(p->p_next);
+					
+					return p;
+				}
+				
+				loopNode = loopNode->p_next;
+			}
+			
+			return(NULL);			
+			
+		}
+	}
  
+}
  
-  /**************************************************************************** 
- *
- * pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
- * 
- * Uses EmptyProcQ and RemoveProcQ
- * 
- * }
- * 
- ****************************************************************************/
- 
+ //Return first ProcBlk from process queue.
 pcb_t *headProcQ(pcb_t *tp){
  
 	if(!emptyProcQ(tp))
@@ -133,7 +208,7 @@ pcb_t *headProcQ(pcb_t *tp){
 
 
 
-//Process Tree Maintenance
+//////////////////Process Tree Maintenance//////////////////
  /**************************************************************************** 
  *
  * int emptyChild(pcb_t *p){

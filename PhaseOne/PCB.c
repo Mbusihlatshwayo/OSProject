@@ -14,12 +14,13 @@ void debugA(int a) {
 
 //HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free singlely-linked list
 //HIDDEN pcb_PTR
-HIDDEN pcb_t *pcbList_tp; //Double linked circular list tail pointer
+HIDDEN pcb_t *pcbList_tp; //list tail pointer
 //pcb_PTR pcbList_h;
 
  
  
 //////////////////Process Queue Maintenance//////////////////
+//Queue is double circularly linked list
 
 
 //Initialize a variable to be a tail pointer to a process queue 
@@ -60,6 +61,8 @@ void insertProQ (pcb_t **tp, pcb_t *p) {
 //Remove the head element from process queue and return a pointer to that removed element.
  pcb_t *removeProcQ(pcb_t **tp) { 
 	 
+	 pcb_t *headPCB; //temp var for headNode
+	 
 	// if the procQ is empty 
 	if(emptyProcQ(*tp)){
 		return(NULL);
@@ -72,7 +75,8 @@ void insertProQ (pcb_t **tp, pcb_t *p) {
 	}
 	//if the ProcQ has 2+ nodes
 	else{
-		pcb_t *headPCB = (*tp)->p_next; //set value of node going to be removed and returned.
+		
+		headPCB = (*tp)->p_next; //set value of node going to be removed and returned.
 		(*tp)->p_next = (headPCB->p_next); //set tp's next value as the new head of the list. Question: Can I use headPCB to see
 		(headPCB->p_next)->p_previous = *tp; //set previous of new head to be the tail pointer	
 		
@@ -84,6 +88,9 @@ void insertProQ (pcb_t **tp, pcb_t *p) {
 //Remove the ProcBlk pointed to by p from the process queue. Update queue based on p's location in queue (ie fix next and previous stuff)
 pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 	
+	pcb_t *removedNode; //temp var for node being removed
+	pcb_t *loopNode; //temp var for loopNode
+	
 	// if the procq is empty
 	if(emptyProcQ(*tp)){	
 		return(NULL);
@@ -92,7 +99,7 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 	//if procq has only 1 node
 	else if ((*tp)->p_next == *tp){
 		if(*tp == p){
-			pcb_t *removedNode = *tp;
+			removedNode = *tp;
 			mkEmptyProcQ(*tp);
 			return removedNode;
 		}
@@ -107,7 +114,7 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 		//If p is the tail pointer
 		if(*tp == p){
 			
-			pcb_t *removedNode = (*tp); //set value of node going to be removed and returned.
+			removedNode = (*tp); //set value of node going to be removed and returned.
 			
 			(*tp) = (removedNode->p_previous);
 			(*tp)->p_previous = (removedNode->p_previous); 
@@ -125,7 +132,7 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 		//Else p is the middle 
 		else{
 			
-			pcb_t *loopNode = ((*tp)->p_next);
+			loopNode = ((*tp)->p_next);
 			
 			while(loopNode != *tp)
 			{
@@ -167,7 +174,6 @@ pcb_t *headProcQ(pcb_t *tp){
 //Insert the element pointed to by p onto the pcbFree list
 void freePcb(pcb_t *p){
 	insertProQ(&pcbList_tp, p);
-	//Check this
 
 }
 
@@ -211,11 +217,16 @@ pcb_t *allocPcb(){
 
 
 //////////////////Process Tree Maintenance//////////////////
+//double linearly linked list
 
 //Return T if the ProcBlk pointed to by p has no children. Return F otherwise.
  int emptyChild(pcb_t *p){
- 
- //Returns T/F
+  
+ if(p->p_child == NULL){
+	 return 1;
+ } else {
+	 return 0;
+ }
  
 }
 
@@ -224,7 +235,15 @@ void insertChild(pcb_t *prnt, pcb_t *p){
  
 //Purpose: Parent now has another child
 //Treated as a stack (use p_sib for this)
- 
+	p->p_prnt = prnt;
+	if (emptyChild(prnt)) {
+		p->p_sib = NULL;
+	} else {
+		pcb_t *temp;
+		temp = prnt->p_child;
+		prnt->p_child = p;
+		p->p_sib = temp;
+	}
 }
 
 //Make the first child of the ProBlk pointed to by p no longer a child of p. Return NULL if there were no children of p. Otherwise return removed child

@@ -232,9 +232,6 @@ pcb_t *allocPcb(){
 
 //Make the ProcBlk pointed to by p a child of the ProcBlk pointed to by prnt
 void insertChild(pcb_t *prnt, pcb_t *p){
- 
-//Purpose: Parent now has another child
-//Treated as a stack (use p_sib for this)
 	p->p_prnt = prnt;
 	if (emptyChild(prnt)) {
 		p->p_sib = NULL;
@@ -248,7 +245,20 @@ void insertChild(pcb_t *prnt, pcb_t *p){
 
 //Make the first child of the ProBlk pointed to by p no longer a child of p. Return NULL if there were no children of p. Otherwise return removed child
 pcb_t *removeChild(pcb_t *p){
- 
+  
+  if (emptyChild(p)) {
+	return NULL;
+  } else if ((p->p_child)->p_sib == NULL) {
+	pcb_t *temp;
+	temp = p->p_child;
+	p->p_child = NULL;
+	return temp;
+  } else {
+	  pcb_t *temp;
+	  temp = p->p_child;
+	  p->p_child = (temp)->p_sib;
+	  return temp;
+  }
  
  
 }

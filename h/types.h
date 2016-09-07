@@ -65,7 +65,8 @@ typedef struct pcb_t {
 	// process tree fields 
 	struct pcb_t	*p_prnt, // ptr to parent
 					*p_child,// ptr to child
-					*p_sib;  // ptr to sibling
+					*p_prev_sib,  // ptr to previous sibling
+					*p_nxt_sib;  //ptr to next sibling
 					
 	state_t			 p_s;     // processor state
 	int 			*p_semAdd;// pointer to sema4 on which process blocked

@@ -207,7 +207,8 @@ pcb_t *allocPcb(){
 		removedElement->p_previous = NULL;
 		removedElement->p_prnt = NULL;
 		removedElement->p_child = NULL;
-		removedElement->p_sib = NULL;
+		removedElement->p_nxt_sib = NULL;
+		removedElement->p_prev_sib = NULL;		
 		removedElement->p_semAdd = NULL;
 		
 		return removedElement;
@@ -222,41 +223,61 @@ pcb_t *allocPcb(){
 //Return T if the ProcBlk pointed to by p has no children. Return F otherwise.
  int emptyChild(pcb_t *p){
   
- if(p->p_child == NULL){
-	 return 1;
- } else {
-	 return 0;
- }
+	 if(p->p_child == NULL){
+		 return 1;
+	 } else {
+		 return 0;
+	 }
  
 }
 
 //Make the ProcBlk pointed to by p a child of the ProcBlk pointed to by prnt
 void insertChild(pcb_t *prnt, pcb_t *p){
-	p->p_prnt = prnt;
+	
+	//if parent doesn't have any children, add p as first child
 	if (emptyChild(prnt)) {
-		p->p_sib = NULL;
+		prnt->p_child = p; //set parent's child
+		p->p_prnt = prnt; //set child's parent
+		p->p_prev_sib = NULL; //child doesn't have siblings 
+		p->p_nxt_sib = NULL;
+		
+	//parent already had children, so change child of parent and set siblings	
 	} else {
-		pcb_t *temp;
-		temp = prnt->p_child;
-		prnt->p_child = p;
-		p->p_sib = temp;
+		
+		p->p_nxt_sib = (prnt->p_child); //set p's next sibling as parent's old child
+		p->p_prev_sib = NULL; //set previous sibling to NULL since it is first
+		(prnt->p_child)->p_prev_sib = p; //set old child's previous sibling 
+		
+		p->p_prnt = prnt; //set child's parent
+		prnt->p_child = p; //set new first child p
+		
 	}
 }
 
 //Make the first child of the ProBlk pointed to by p no longer a child of p. Return NULL if there were no children of p. Otherwise return removed child
 pcb_t *removeChild(pcb_t *p){
   
+  //check if p doesn't have any children
   if (emptyChild(p)) {
 	return NULL;
-  } else if ((p->p_child)->p_sib == NULL) {
-	pcb_t *temp;
+	
+  //if p only has one child, update parent's child to be null
+  } else if ((p->p_child)->p_nxt_sib == NULL && (p->p_child)->p_prev_sib == NULL) {
+	pcb_t *temp; //temp var holds child being removed
 	temp = p->p_child;
+	
 	p->p_child = NULL;
+	
 	return temp;
+	
+	//if p has multiple children, make next sibling the new child for parent new child's previous is NULL
   } else {
 	  pcb_t *temp;
 	  temp = p->p_child;
-	  p->p_child = (temp)->p_sib;
+	  
+	  p->p_child = (temp)->p_nxt_sib; //set new child for parent node as the next sibling of old child
+	  (p->p_child)->p_prev_sib = NULL; //set new child's previous sibling as null
+	  
 	  return temp;
   }
  
@@ -266,6 +287,57 @@ pcb_t *removeChild(pcb_t *p){
 //Make the child of the ProcBlk pointed to by p no longer a child of p. Return NULL is p has no parent. Otherwise return p.
 pcb_t *outChild(pcb_t *p){
  
- 
+	 //Check if p doesn't have a parent
+	 if(p->p_prnt == NULL)
+	 {
+		 return NULL;
+	 }
+	 
+	 //If p is the only child of parent
+	 else if (p->p_nxt_sib == NULL && p->p_prev_sib == NULL)
+	 {
+		 (p->p_prnt)->p_child = NULL; //set parent's child to be NULL
+		  p->p_prnt = NULL; //set child to have no parent
+		 
+	 }
+	 
+	 //if p has siblings, so check where it is in the stack and update accordingly
+	 else
+	 {
+		 //is p the first child? If so, need to set parent's child to next sibling & that sib's previous is set to NULL
+		 if(p->p_prev_sib == NULL) 
+		 {
+			(p->p_prnt)->p_child = p->p_nxt_sib; //set new first child for parent
+			(p->p_nxt_sib)->p_prev_sib = NULL; //set new child's previous sibling as null
+			
+			p->p_prnt = NULL; //set p to have no parent
+			p->p_nxt_sib = NULL; //set p to have no next sibling. Previous sib is already NULL
+		
+		 }
+		 
+		 //is p the last child? If so, previous sibling needs to have next sibling set to NULL
+		 else if (p->p_nxt_sib == NULL)
+		 {
+			(p->p_prev_sib)->p_nxt_sib = NULL;
+			 
+			p->p_prnt = NULL; //set p to have no parent
+			p->p_prev_sib = NULL; //set p to have no previous sibling. Next sib is already NULL
+			 
+		 }
+		 
+		 //else, just update siblings 'cause it's a middle child
+		 else
+		 {
+			 (p->p_nxt_sib)->p_prev_sib = (p->p_prev_sib); //set p's next sibling to go to p's previous sibling
+			 (p->p_prev_sib)->p_nxt_sib = (p->p_nxt_sib); //set p's previous sibling to go to p's next sibling
+			 
+			 p->p_prnt = NULL;
+			 p->p_prev_sib = NULL;
+			 p->p_nxt_sib = NULL;
+			 
+		 }
+	 }
+	 
+	return p;
  
 }

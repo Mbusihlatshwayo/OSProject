@@ -1,4 +1,5 @@
 ///////////////////////* PCB.c *///////////////////////
+//Add purpose of module here. 
 
 #include "../h/const.h"
 #include "../h/types.h"
@@ -13,54 +14,9 @@ void debugA(int a) {
 
 //HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free singlely-linked list
 //HIDDEN pcb_PTR
-HIDDEN pcb_t *pcbList_tp;
+HIDDEN pcb_t *pcbList_tp; //Double linked circular list tail pointer
 //pcb_PTR pcbList_h;
 
-
-//////////////////Allocation & Deallocation of ProBlk's//////////////////
-
-//Insert the element pointed to by p onto the pcbFree list
-void freePcb(pcb_t *p){
-	insertProQ(*pcbList_tp, p);
-	//Check this
-
-}
-
-//Return Null if PCBFree list is empty. Otherwise, remove an element from PCBfree list, provide initial values for all fields (Null/0) and return a pointer to removed element.
-pcb_t *allocPcb(){
-	//Check this
-	
-	// if the procQ is empty 
-	if(emptyProcQ(pcbList_tp)){
-		return(NULL);
-	}
-	else
-	{
-		pcb_t *removedElement = removeProcQ(*pcbList_tp);
-		removedElement->p_next = NULL; //Question: Would this loop to itself like InsertProcQ does?
-		removedElement->p_previous = NULL;
-		removedElement->p_prnt = NULL;
-		removedElement->p_child = NULL;
-		removedElement->p_sib = NULL;
-		
-		//Question: What about p_s & p_semAdd
-		
-		return removedElement;
-	}
-
-}
- 
-//Initialize the pcbFree list to contain all the elements of the static array of MAXPROC ProbBlk's. This is called only once 
-void initPcbs() {
-
-	static pcb_t procTable[MAXPROC];
-
-	pcbList_tp = mkEmptyProcQ();
-	for(int i = 0; i < MAXPROC; i++){
-		freePcb(&procTable[i]);
-	}
- 
-}
  
  
 //////////////////Process Queue Maintenance//////////////////
@@ -102,7 +58,7 @@ void insertProQ (pcb_t **tp, pcb_t *p) {
 }
 
 //Remove the head element from process queue and return a pointer to that removed element.
- pcb_t *removeProcQ(pcb_t **tp) { //Question: This has an error
+ pcb_t *removeProcQ(pcb_t **tp) { 
 	 
 	// if the procQ is empty 
 	if(emptyProcQ(*tp)){
@@ -134,9 +90,9 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 	}
 	
 	//if procq has only 1 node
-	else if (*tp)->p_next == *tp){
+	else if ((*tp)->p_next == *tp){
 		if(*tp == p){
-			pcb_t removedNode = *tp;
+			pcb_t *removedNode = *tp;
 			mkEmptyProcQ(*tp);
 			return removedNode;
 		}
@@ -177,8 +133,8 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 				if(loopNode == p)
 				{
 					
-					(p->p_next)->p_previous(p->p_previous);
-					(p->previous)->p_next(p->p_next);
+					(p->p_next)->p_previous = (p->p_previous);
+					(p->p_previous)->p_next = (p->p_next);
 					
 					return p;
 				}
@@ -206,46 +162,81 @@ pcb_t *headProcQ(pcb_t *tp){
 }
 
 
+//////////////////Allocation & Deallocation of ProBlk's//////////////////
+
+//Insert the element pointed to by p onto the pcbFree list
+void freePcb(pcb_t *p){
+	insertProQ(&pcbList_tp, p);
+	//Check this
+
+}
+
+ 
+//Initialize the pcbFree list to contain all the elements of the static array of MAXPROC ProbBlk's. This is called only once 
+void initPcbs() {
+
+	static pcb_t procTable[MAXPROC];
+
+	pcbList_tp = mkEmptyProcQ();
+	for(int i = 0; i < MAXPROC; i++){
+		freePcb(&procTable[i]);
+	}
+ 
+}
+
+ //Return Null if PCBFree list is empty. Otherwise, remove an element from PCBfree list, provide initial values for all fields (Null/0) and return a pointer to removed element.
+pcb_t *allocPcb(){
+	
+	pcb_t *removedElement;
+	
+	removedElement = removeProcQ(&pcbList_tp);
+	
+	if(emptyProcQ(pcbList_tp)){
+		return(NULL);
+	}
+	else
+	{
+
+		removedElement->p_next = NULL; 
+		removedElement->p_previous = NULL;
+		removedElement->p_prnt = NULL;
+		removedElement->p_child = NULL;
+		removedElement->p_sib = NULL;
+		removedElement->p_semAdd = NULL;
+		
+		return removedElement;
+	}
+
+}
 
 
 //////////////////Process Tree Maintenance//////////////////
- /**************************************************************************** 
- *
- * int emptyChild(pcb_t *p){
- * 
- * Returns T/F
- * 
- * }
- * 
- ****************************************************************************/
+
+//Return T if the ProcBlk pointed to by p has no children. Return F otherwise.
+ int emptyChild(pcb_t *p){
  
-  /**************************************************************************** 
- *
- * void insertChild(pcb_t *prnt, pcb_t *p){
- * 
- * Purpose: Parent now has another child
- * Treated as a stack (use p_sib for this)
- * 
- * }
- * 
- ****************************************************************************/
+ //Returns T/F
  
-  /**************************************************************************** 
- *
- * pcb_t *removeChild(pcb_t *p){
- * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
+}
+
+//Make the ProcBlk pointed to by p a child of the ProcBlk pointed to by prnt
+void insertChild(pcb_t *prnt, pcb_t *p){
  
-  /**************************************************************************** 
- *
- * pcb_t *outChild(pcb_t *p){
- * 
- * 
- * 
- * }
- * 
- ****************************************************************************/
+//Purpose: Parent now has another child
+//Treated as a stack (use p_sib for this)
+ 
+}
+
+//Make the first child of the ProBlk pointed to by p no longer a child of p. Return NULL if there were no children of p. Otherwise return removed child
+pcb_t *removeChild(pcb_t *p){
+ 
+ 
+ 
+}
+ 
+//Make the child of the ProcBlk pointed to by p no longer a child of p. Return NULL is p has no parent. Otherwise return p.
+pcb_t *outChild(pcb_t *p){
+ 
+ 
+ 
+}

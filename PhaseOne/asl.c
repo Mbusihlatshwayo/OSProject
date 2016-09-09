@@ -21,7 +21,6 @@ int freeProcCount = 20; //The max number of ASL's available
 
 /*Looks through ASL list for sema4 at semAdd. */
 semd_t *getActiveSem(int *semAdd){
-	int i = 0;	
 	semd_t *loopSema;
 	
 	loopSema = semd_h;

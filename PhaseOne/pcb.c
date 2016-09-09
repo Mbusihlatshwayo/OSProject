@@ -4,6 +4,7 @@
  * The allocation and deallocation of ProcBlks
  * The maintenance of queues of ProcBlks
  * The maintenance of trees of ProcBlks 
+ * This is handle through the use of a doubly linked circular linked list
  * 
  ****************************************************************************/
 
@@ -25,7 +26,9 @@ HIDDEN pcb_t *pcbList_tp; /*double circularly linked list tail pointer*/
 /*/////////////////Process Queue Maintenance/////////////////*/
 
 
-/*/Initialize a variable to be a tail pointer to a process queue */
+/* This method is used to initialize a variable to be tail pointer to a
+process queue.
+Return a pointer to the tail of an empty process queue; i.e. NULL. */
 pcb_t *mkEmptyProcQ (){
 	return(NULL);
 }
@@ -35,7 +38,9 @@ int emptyProcQ (pcb_t *tp){
 	return (tp == NULL); 
 }
 
-/*Insert the ProcBlk pointed to by p into the process queue.*/
+/* Insert the ProcBlk pointed to by p into the process queue whose
+tail-pointer is pointed to by tp. Note the double indirection through
+tp to allow for the possible updating of the tail pointer as well. */
 void insertProcQ (pcb_t **tp, pcb_t *p) {
 
 	/* if the procq is empty*/

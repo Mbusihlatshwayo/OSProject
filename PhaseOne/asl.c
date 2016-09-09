@@ -4,7 +4,8 @@
  * The maintenance of a single sorted list of active semaphore descriptors
  * 		each of which supports a queue of ProcBlks
  * 
- * ENTER NUMBER OF DUMMY NODES AND HOW LISTS ARE BUILT HERE
+ * this list is handle by using a single linked linear linked list with a
+ * dummy head node
  * 
  ****************************************************************************/
 
@@ -41,8 +42,10 @@ HIDDEN semd_t *getActiveSem(int *semAdd){
 		{
 			return loopSema->s_next;
 		}
-		
-		loopSema = (loopSema->s_next);
+		else
+		{
+			loopSema = (loopSema->s_next);
+		}
 	}
 	
 	return NULL; /*sema4 at passed in semAdd doesn't exist*/
@@ -60,13 +63,16 @@ HIDDEN semd_t *getFreeSemd(){
 		return NULL;
 	}
 	
-	freeProcCount = freeProcCount-1; /*remove from free list*/
-	
-	freeSemd = semdFree_h->s_next;
-	
-	(semdFree_h->s_next) = (freeSemd)->s_next; /*the header of the free list now points old head's next sema4*/
-	
-	return freeSemd;
+	else
+	{
+		freeProcCount = freeProcCount-1; /*remove from free list*/
+		
+		freeSemd = semdFree_h->s_next;
+		
+		(semdFree_h->s_next) = (freeSemd)->s_next; /*the header of the free list now points old head's next sema4*/
+		
+		return freeSemd;
+	}
 	
 	
 }
@@ -76,6 +82,10 @@ HIDDEN semd_t *addSema(semd_t *sema, int *semAdd)
 {
 	int found = 0; /*var to keep track if new sema found place before the end of the list was reached*/
 	semd_t *loopSema;
+	
+		
+	sema->s_semAdd = semAdd; /*set new semas address*/
+	sema->s_procQ = mkEmptyProcQ(); /*clear sema's procQ*/
 	
 	/*If the ASL list is empty, add sema*/
 	if(semd_h->s_next == NULL)
@@ -87,25 +97,29 @@ HIDDEN semd_t *addSema(semd_t *sema, int *semAdd)
 	
 	/*else the ASL list has multiple semas so find where new sema belongs and update list ranking*/
 	else
-	{		
-		/*If the first node has an address greater than the new one, add the new one before it and update head pointer*/
-		if((semd_h->s_next)->s_semAdd > semAdd)
-		{
-			sema->s_next = semd_h->s_next;	/*sema points to larger friend that was previously the first sema*/
-			semd_h->s_next = sema; /*head points to new sema*/
-			
-		}
-		
-		/*else do a loop and find where semAdd of new sema is less than the next*/
-		else 
-		{
-	
-			loopSema = semd_h;
-				
-				
-			while(loopSema->s_next !=NULL)
+	{	
+		while(found!=1)
 			{
-				if((loopSema->s_next)->s_semAdd > semAdd)
+				/*at end of list, add sema*/
+				if(loopSema->s_next == NULL)
+				{
+					loopSema->s_next = sema;
+					sema->s_next = NULL;
+					
+					found = 1;
+				}
+					
+				/*If the first node has an address greater than the new one, add the new one before it and update head pointer*/
+				else if((semd_h->s_next)->s_semAdd > semAdd)
+				{
+					sema->s_next = semd_h->s_next;	/*sema points to larger friend that was previously the first sema*/
+					semd_h->s_next = sema; /*head points to new sema*/
+					
+					found = 1;
+				}
+				
+				/*If the sema address is anywhere other that after the dummy node's next*/
+				else if((loopSema->s_next)->s_semAdd > semAdd)
 				{
 					sema->s_next = loopSema->s_next;
 					loopSema->s_next = sema;
@@ -113,21 +127,15 @@ HIDDEN semd_t *addSema(semd_t *sema, int *semAdd)
 					found = 1;
 				}
 				
-				loopSema = loopSema->s_next;
+				/*loop onnnnnn*/
+				else
+				{
+					loopSema = loopSema->s_next;
+				}
+
 			}
-			
-			/*if the loop got to the end and new sema's address is still biggest, add to the end*/
-			if(found == 0) 
-			{
-				loopSema->s_next = sema;
-				sema->s_next = NULL;
-			}
-		}
 		
 	}
-	
-	sema->s_semAdd = semAdd; /*set new semas address*/
-	sema->s_procQ = mkEmptyProcQ(); /*clear sema's procQ*/
 	
 	return sema;
 }

@@ -174,6 +174,7 @@ HIDDEN semd_t *removeSema(semd_t *sema){
 		loopSema = loopSema->s_next;
 	}
 	
+	return sema;
 	
 }
 

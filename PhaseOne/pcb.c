@@ -39,7 +39,7 @@ int emptyProcQ (pcb_t *tp){
 void insertProcQ (pcb_t **tp, pcb_t *p) {
 
 	/* if the procq is empty*/
-	if(emptyProcQ(*tp)){
+	if(emptyProcQ((*tp))){
 		/* the next/previous nodes for the current node, is also the current node*/
 		p->p_next = p; 
 		p->p_previous = p;
@@ -66,26 +66,34 @@ void insertProcQ (pcb_t **tp, pcb_t *p) {
 
 pcb_t *removeProcQ(pcb_t **tp) { 
 	 
-	 pcb_t *headPCB; /*temp var for headNode*/
+	 debugA((int)*tp);
+	 /*pcb_t *headPCB; temp var for headNode*/
 	 
 	/* if the procQ is empty */
 	if(emptyProcQ(*tp)){
+		
+		debugA(1);
 		return(NULL);
+	
 	}
 	/*if the ProcQ only has 1 node*/
 	else if((*tp)->p_next == *tp){
-		headPCB = *tp;
+		pcb_t *headPCB = *tp;
 		*tp = mkEmptyProcQ(); /*update tp to be removed*/
+		
+		debugA(2);
 		return(headPCB);
+		
 	}
 	/*if the ProcQ has 2+ nodes*/
 	else{
 		
-		headPCB = (*tp)->p_next; /*set value of node going to be removed and returned.*/
-		(((*tp)->p_next)->p_next)->p_previous = *tp; /*set previous of new head to be the tail pointer*/
+		pcb_t *headPCB = (*tp)->p_next; /*set value of node going to be removed and returned.*/
+		(((*tp)->p_next)->p_next)->p_previous = (*tp); /*set previous of new head to be the tail pointer*/
 		(*tp)->p_next = (((*tp)->p_next)->p_next); /*set tp's next value as the new head of the list. Question: Can I use headPCB to see*/
 		
 		
+		debugA(3);
 		return(headPCB);
 
 	}
@@ -133,7 +141,7 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 		
 		/*If p is the head pointer*/
 		else if (p == (*tp)->p_next){
-			return removeProcQ(*tp);
+			return removeProcQ(tp);
 			
 		}
 		
@@ -208,6 +216,8 @@ void initPcbs() {
 pcb_t *allocPcb(){
 	pcb_t *removedElement;
 	removedElement = removeProcQ(&pcbList_tp);
+	debugA((int)removedElement);
+	
 	if(removedElement != NULL){
 		removedElement->p_next = NULL;
 		removedElement->p_previous = NULL;
@@ -216,7 +226,6 @@ pcb_t *allocPcb(){
 		removedElement->p_nxt_sib = NULL;
 		removedElement->p_prev_sib = NULL;
 		removedElement->p_semAdd = NULL;
-		debugA((int)removedElement);
 	}
 	return(removedElement);
 }

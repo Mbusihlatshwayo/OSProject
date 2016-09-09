@@ -4,37 +4,39 @@
  * The maintenance of a single sorted list of active semaphore descriptors
  * 		each of which supports a queue of ProcBlks
  * 
+ * ENTER NUMBER OF DUMMY NODES AND HOW LISTS ARE BUILT HERE
+ * 
  ****************************************************************************/
 
 #include "../h/const.h"
 #include "../h/types.h"
-#include "../e/PCB.e"
+#include "../e/pcb.e"
 
-//////////////////Module global variables//////////////////
+/****************Module global variables****************/
 
-HIDDEN semd_t *semd_h; //head pointer to ASL (single, linear w/ dummy headNode)
-HIDDEN semd_t *semdFree_h; //head pointer to list holding unused semaphore descriptors (singe, linear)
-int freeProcCount = 20; //The max number of ASL's available 
+HIDDEN semd_t *semd_h; /*head pointer to ASL (single, linear w/ dummy headNode)*/
+HIDDEN semd_t *semdFree_h; /*head pointer to list holding unused semaphore descriptors (singe, linear)*/
+int freeProcCount = 20; /*The max number of ASL's available */
 
 
-//////////////////Helper Functions////////////////////////
+/****************Helper Functions****************/
 
 /*Looks through ASL list for sema4 at semAdd. */
-semd_t *getActiveSem(int *semAdd){
+HIDDEN semd_t *getActiveSem(int *semAdd){
 	semd_t *loopSema;
 	
 	loopSema = semd_h;
 	
-	//if the list is empty, return NULL
+	/*if the list is empty, return NULL*/
 	if(semd_h->s_next == NULL)
 	{
 		return NULL;
 	}
 	
-	//else loop through list
+	/*else loop through list*/
 	while(loopSema->s_next != NULL)
 	{
-		//if next sema's semAdd is the address we were looking for, return that sema4
+		/*if next sema's semAdd is the address we were looking for, return that sema4*/
 		if((loopSema->s_next)->s_semAdd == semAdd) 
 		{
 			return loopSema->s_next;
@@ -43,58 +45,58 @@ semd_t *getActiveSem(int *semAdd){
 		loopSema = (loopSema->s_next);
 	}
 	
-	return NULL; //sema4 at passed in semAdd doesn't exist
+	return NULL; /*sema4 at passed in semAdd doesn't exist*/
 
 }
 
-//Return a free sema4 from the free list if available. Return null otherwise
-semd_t *getFreeSemd(){
+/*Return a free sema4 from the free list if available. Return null otherwise*/
+HIDDEN semd_t *getFreeSemd(){
 	
 	semd_t *freeSemd;
 	
-	//check if free sema4 list is empty
+	/*check if free sema4 list is empty*/
 	if(semdFree_h->s_next == NULL)
 	{
 		return NULL;
 	}
 	
-	freeProcCount = freeProcCount-1; //remove from free list
+	freeProcCount = freeProcCount-1; /*remove from free list*/
 	
 	freeSemd = semdFree_h->s_next;
 	
-	(semdFree_h->s_next) = (freeSemd)->s_next; //the header of the free list now points old head's next sema4
+	(semdFree_h->s_next) = (freeSemd)->s_next; /*the header of the free list now points old head's next sema4*/
 	
 	return freeSemd;
 	
 	
 }
 
-//Find where passed sema4 goes based on semAdd and update ASL list. Return newly added sema4
-semd_t *addSema(semd_t *sema, int *semAdd)
+/*Find where passed sema4 goes based on semAdd and update ASL list. Return newly added sema4*/
+HIDDEN semd_t *addSema(semd_t *sema, int *semAdd)
 {
-	int found = 0; //var to keep track if new sema found place before the end of the list was reached
+	int found = 0; /*var to keep track if new sema found place before the end of the list was reached*/
 	semd_t *loopSema;
 	
-	//If the ASL list is empty, add sema
+	/*If the ASL list is empty, add sema*/
 	if(semd_h->s_next == NULL)
 	{
-		semd_h->s_next = sema; //head points to sema
-		sema->s_next = NULL;	//sema is aloooonnneeee on list :(
+		semd_h->s_next = sema; /*head points to sema*/
+		sema->s_next = NULL;	/*sema is aloooonnneeee on list :(*/
 		
 	}
 	
-	//else the ASL list has multiple semas so find where new sema belongs and update list ranking
+	/*else the ASL list has multiple semas so find where new sema belongs and update list ranking*/
 	else
 	{		
-		//If the first node has an address greater than the new one, add the new one before it and update head pointer
+		/*If the first node has an address greater than the new one, add the new one before it and update head pointer*/
 		if((semd_h->s_next)->s_semAdd > semAdd)
 		{
-			sema->s_next = semd_h->s_next;	//sema points to larger friend that was previously the first sema
-			semd_h->s_next = sema; //head points to new sema
+			sema->s_next = semd_h->s_next;	/*sema points to larger friend that was previously the first sema*/
+			semd_h->s_next = sema; /*head points to new sema*/
 			
 		}
 		
-		//else do a loop and find where semAdd of new sema is less than the next
+		/*else do a loop and find where semAdd of new sema is less than the next*/
 		else 
 		{
 	
@@ -114,7 +116,7 @@ semd_t *addSema(semd_t *sema, int *semAdd)
 				loopSema = loopSema->s_next;
 			}
 			
-			//if the loop got to the end and new sema's address is still biggest, add to the end
+			/*if the loop got to the end and new sema's address is still biggest, add to the end*/
 			if(found == 0) 
 			{
 				loopSema->s_next = sema;
@@ -124,23 +126,23 @@ semd_t *addSema(semd_t *sema, int *semAdd)
 		
 	}
 	
-	sema->s_semAdd = semAdd; //set new semas address
-	sema->s_procQ = mkEmptyProcQ(); //clear sema's procQ
+	sema->s_semAdd = semAdd; /*set new semas address*/
+	sema->s_procQ = mkEmptyProcQ(); /*clear sema's procQ*/
 	
 	return sema;
 }
 
-//Remove empty sema4 from ASL list and update list
-semd_t *removeSema(semd_t *sema){
+/*Remove empty sema4 from ASL list and update list*/
+HIDDEN semd_t *removeSema(semd_t *sema){
 	
 	semd_t *loopSema;
 	
 	loopSema = semd_h;
 	
-	//if the head pointer's next is the sema we are moving, update it.
+	/*if the head pointer's next is the sema we are moving, update it.*/
 	if(semd_h->s_next == sema)
 	{
-		//check if sema is not the only one on the ASL list
+		/*check if sema is not the only one on the ASL list*/
 		if(sema->s_next != NULL)
 		{
 			semd_h->s_next = sema->s_next;
@@ -156,10 +158,10 @@ semd_t *removeSema(semd_t *sema){
 		return sema;
 	}
 		
-	//loop through ASL list to find where sema is that we are removing
+	/*loop through ASL list to find where sema is that we are removing*/
 	while(loopSema->s_next !=NULL)
 	{
-		//when we find it, update and return it
+		/*when we find it, update and return it*/
 		if(loopSema->s_next ==sema)
 		{
 			loopSema->s_next = sema->s_next;
@@ -175,34 +177,34 @@ semd_t *removeSema(semd_t *sema){
 	
 }
 
-//add empty Sema4 to freelist
-void addToFreeList(semd_t *semToAdd) {
+/*add empty Sema4 to freelist*/
+HIDDEN void addToFreeList(semd_t *semToAdd) {
 	freeProcCount = freeProcCount + 1;
 	semToAdd->s_next = semdFree_h->s_next;
 	semdFree_h->s_next = semToAdd;
 }
 
 
-//////////////////ASL Functions////////////////////////
+/****************ASL Functions****************/
 
-//Initialize the semdFree list
+/*Initialize the semdFree list*/
 void initASL(){
 
-	HIDDEN semd_t semdTable[MAXPROC +1]; //plus one is for dummy node at head	
-	HIDDEN semd_t dummyNode;
+	static semd_t semdTable[MAXPROC +1]; /*plus one is for dummy node at head*/
+	static semd_t dummyNode;
 	
 	int i = 0;
 	
 	while(i<MAXPROC)
 	{
-		semdTable[i].s_next = &semdTable[i+1]; //link sema4's together
+		semdTable[i].s_next = &semdTable[i+1]; /*link sema4's together*/
 		i++;
 	}
 
-	semdTable[(MAXPROC)].s_next = NULL; // the last element has nothing after it so set it to NULL
-	semdFree_h = &(semdTable[0]); //set the head of the free list
+	semdTable[(MAXPROC)].s_next = NULL; /* the last element has nothing after it so set it to NULL*/
+	semdFree_h = &(semdTable[0]); /*set the head of the free list*/
 	
-	//Make sure dummy node is empty and the head is set to the dummy node.
+	/*Make sure dummy node is empty and the head is set to the dummy node.*/
 	dummyNode.s_next = NULL;
 	dummyNode.s_semAdd = 0;
 	dummyNode.s_procQ = mkEmptyProcQ();
@@ -217,7 +219,7 @@ pcb_t *headBlocked(int *semAdd){
 	pcb_t *headBlock;
 	semd_t *returnedSema;
 	
-	returnedSema = getActiveSem(semAdd); //Check if sema4 at semAdd exists
+	returnedSema = getActiveSem(semAdd); /*Check if sema4 at semAdd exists*/
 	
 	if(returnedSema == NULL)
 	{
@@ -241,25 +243,25 @@ pcb_t *headBlocked(int *semAdd){
 int insertBlocked(int *semAdd, pcb_t *p){
 	semd_t *newSema;
 	
-	newSema = getActiveSem(semAdd); //check if sema4 exists at semAdd
+	newSema = getActiveSem(semAdd); /*check if sema4 exists at semAdd*/
 	
-	//If there isn't sema4 at the semAdd, make one at the address and add p.
+	/*If there isn't sema4 at the semAdd, make one at the address and add p.*/
 	if(newSema == NULL)
 	{
-		newSema = getFreeSemd(); //Grab a free sema from free list
+		newSema = getFreeSemd(); /*Grab a free sema from free list*/
 		
-		//If there isn't any free sema's return true
+		/*If there isn't any free sema's return true*/
 		if(newSema == NULL)
 		{
 			return TRUE;
 		}
 		
-		//else, add newSema to ASL list and update list.	
+		/*else, add newSema to ASL list and update list.*/
 		newSema = addSema(newSema, semAdd);
 		
 	}
 	
-	insertProQ(&(newSema->s_procQ), p); //insert p at the address within the procQ
+	insertProcQ(&(newSema->s_procQ), p); /*insert p at the address within the procQ*/
 	p->p_semAdd = semAdd;
 
 	return FALSE;
@@ -307,7 +309,7 @@ pcb_t *outBlocked(pcb_t *p){
 		process = outProcQ(&(semAddress->s_procQ), p);
 		
 		if (emptyProcQ(semAddress->s_procQ)) {
-			semAddress = removeActive(p->p_semAdd);
+			semAddress = getActiveSem(p->p_semAdd);
 			addToFreeList(semAddress);
 		}
 		

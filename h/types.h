@@ -54,22 +54,22 @@ typedef struct state_t {
 
 } state_t, *state_PTR;
 
-// PCB structure 
+/* PCB structure */
 typedef struct pcb_t {
-	// process queue fields
-	struct pcb_t 	*p_next; // this is a pointer to the next entry
-						     //in the data Structure 
-	struct pcb_t	*p_previous; // pointer to the previous entry 
-								 // in the data structure
+	/* process queue fields*/
+	struct pcb_t 	*p_next; /*this is a pointer to the next entry*/
+						     /*in the data Structure*/ 
+	struct pcb_t	*p_previous; /* pointer to the previous entry */
+								 /* in the data structure*/
 						  
-	// process tree fields 
-	struct pcb_t	*p_prnt, // ptr to parent
-					*p_child,// ptr to child
-					*p_prev_sib,  // ptr to previous sibling
-					*p_nxt_sib;  //ptr to next sibling
+	/* process tree fields */
+	struct pcb_t	*p_prnt, /* ptr to parent*/
+					*p_child,/* ptr to child*/
+					*p_prev_sib,  /* ptr to previous sibling*/
+					*p_nxt_sib;  /*ptr to next sibling*/
 					
-	state_t			 p_s;     // processor state
-	int 			*p_semAdd;// pointer to sema4 on which process blocked
+	state_t			 p_s;     /* processor state*/
+	int 			*p_semAdd;/*pointer to sema4 on which process blocked*/
 	
 } pcb_t;
 

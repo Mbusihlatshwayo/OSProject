@@ -7,9 +7,8 @@
  * 
  ****************************************************************************/
 
-// maximum process ////
+/* maximum process ///*/
 #define MAXPROC 20
-///////////////////////
 
 /* Hardware & software constants */
 #define PAGESIZE		4096	/* page size in bytes */

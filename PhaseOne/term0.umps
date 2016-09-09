@@ -1,0 +1,2 @@
+Initialized process control blocks   
+allocPcb: unexpected NULL   kernel panic()

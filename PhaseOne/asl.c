@@ -59,6 +59,7 @@ semd_t *getFreeSemd(){
 		return NULL;
 	}
 	
+	freeProcCount = freeProcCount-1; //remove from free list
 	
 	freeSemd = semdFree_h->s_next;
 	
@@ -72,7 +73,6 @@ semd_t *getFreeSemd(){
 //Find where passed sema4 goes based on semAdd and update ASL list. Return newly added sema4
 semd_t *addSema(semd_t *sema, int *semAdd)
 {
-	int i = 0;	
 	int found = 0; //var to keep track if new sema found place before the end of the list was reached
 	semd_t *loopSema;
 	
@@ -112,7 +112,7 @@ semd_t *addSema(semd_t *sema, int *semAdd)
 					found = 1;
 				}
 				
-				i++;
+				loopSema = loopSema->s_next;
 			}
 			
 			//if the loop got to the end and new sema's address is still biggest, add to the end
@@ -129,6 +129,58 @@ semd_t *addSema(semd_t *sema, int *semAdd)
 	sema->s_procQ = mkEmptyProcQ(); //clear sema's procQ
 	
 	return sema;
+}
+
+//Remove empty sema4 from ASL list and update list
+semd_t *removeSema(semd_t *sema){
+	
+	semd_t *loopSema;
+	
+	loopSema = semd_h;
+	
+	//if the head pointer's next is the sema we are moving, update it.
+	if(semd_h->s_next == sema)
+	{
+		//check if sema is not the only one on the ASL list
+		if(sema->s_next != NULL)
+		{
+			semd_h->s_next = sema->s_next;
+		}
+		
+		else
+		{	
+			semd_h->s_next = NULL;
+		}
+		
+		sema->s_next = NULL;
+		sema->s_semAdd = NULL;
+		return sema;
+	}
+		
+	//loop through ASL list to find where sema is that we are removing
+	while(loopSema->s_next !=NULL)
+	{
+		//when we find it, update and return it
+		if(loopSema->s_next ==sema)
+		{
+			loopSema->s_next = sema->s_next;
+			sema->s_next = NULL;
+			sema->s_semAdd = NULL;
+			
+			return sema;
+		}
+		
+		loopSema = loopSema->s_next;
+	}
+	
+	
+}
+
+//add empty Sema4 to freelist
+void addToFreeList(semd_t *semToAdd) {
+	freeProcCount = freeProcCount + 1;
+	semToAdd->s_next = semdFree_h->s_next;
+	semdFree_h->s_next = semToAdd;
 }
 
 
@@ -232,18 +284,12 @@ pcb_t *removeBlocked(int *semAdd){
 		process = removeProcQ(&(semAddress->s_procQ));
 		
 		if(emptyProcQ(semAddress->s_procQ)) {
-			// removeActive
-			// add the free list
+			semAddress = removeSema(semAddress);
+			addToFreeList(semAddress);
 		}
 		
 		return process;
 	}
-}
-
-void addToFreeList(semd_t *semToAdd) {
-	freeProcCount = freeProcCount + 1;
-	semToAdd->s_next = semdFree_h->s_next;
-	semdFree_h->s_next = semToAdd;
 }
 
 /* Remove the ProcBlk pointed to by p from the process queue associated with p’s semaphore (p→ p semAdd) on the ASL. If ProcBlk

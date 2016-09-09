@@ -1,5 +1,11 @@
-///////////////////////* PCB.c *///////////////////////
-//Add purpose of module here. 
+/*****************************  PCB.c  *************************************** 
+ * This module manages the queue of ProBlks by implementing:
+ * 
+ * The allocation and deallocation of ProcBlks
+ * The maintenance of queues of ProcBlks
+ * The maintenance of trees of ProcBlks 
+ * 
+ ****************************************************************************/
 
 #include "../h/const.h"
 #include "../h/types.h"
@@ -12,15 +18,10 @@ void debugA(int a) {
 
 //////////////////Module global variables//////////////////
 
-//HIDDEN pcb_t *p, pcbFree_h; // pointer to head of the free singlely-linked list
-//HIDDEN pcb_PTR
-HIDDEN pcb_t *pcbList_tp; //list tail pointer
-//pcb_PTR pcbList_h;
+HIDDEN pcb_t *pcbList_tp; //double circularly linked list tail pointer
 
  
- 
 //////////////////Process Queue Maintenance//////////////////
-//Queue is double circularly linked list
 
 
 //Initialize a variable to be a tail pointer to a process queue 
@@ -218,7 +219,7 @@ pcb_t *allocPcb(){
 
 
 //////////////////Process Tree Maintenance//////////////////
-//double linearly linked list
+//Note: Nodes on the same level (i.e siblings) are in a double linearly linked list
 
 //Return T if the ProcBlk pointed to by p has no children. Return F otherwise.
  int emptyChild(pcb_t *p){

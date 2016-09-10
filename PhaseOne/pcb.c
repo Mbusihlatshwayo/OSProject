@@ -69,40 +69,24 @@ void insertProcQ (pcb_t **tp, pcb_t *p) {
 
 /*Remove the head element from process queue and return a pointer to that removed element.*/
 
-pcb_t *removeProcQ(pcb_t **tp) { 
-	 
-	 debugA((int)*tp);
-	 /*pcb_t *headPCB; temp var for headNode*/
-	 
-	/* if the procQ is empty */
+pcb_t *removeProcQ(pcb_t **tp){
+	/* Case 1: ProcQ is empty*/
 	if(emptyProcQ(*tp)){
-		
-		debugA(1);
 		return(NULL);
-	
-	}
-	/*if the ProcQ only has 1 node*/
+		
+	}/* Case 2: Only one ProcBlk in ProcQ*/
 	else if((*tp)->p_next == *tp){
-		pcb_t *headPCB = *tp;
-		*tp = mkEmptyProcQ(); /*update tp to be removed*/
-		
-		debugA(2);
-		return(headPCB);
-		
-	}
-	/*if the ProcQ has 2+ nodes*/
+		pcb_t *old = (*tp);
+		*tp = mkEmptyProcQ();
+		return(old);
+	}/* Case 3: More than 1 ProcBlk in ProcQ*/
 	else{
-		
-		pcb_t *headPCB = (*tp)->p_next; /*set value of node going to be removed and returned.*/
-		(((*tp)->p_next)->p_next)->p_previous = (*tp); /*set previous of new head to be the tail pointer*/
-		(*tp)->p_next = (((*tp)->p_next)->p_next); /*set tp's next value as the new head of the list. Question: Can I use headPCB to see*/
-		
-		
-		debugA(3);
-		return(headPCB);
-
+		pcb_t *old = (*tp)->p_next;
+		(*tp)->p_next->p_next->p_previous = *tp;
+		(*tp)->p_next = (*tp)->p_next->p_next;
+		return(old);
 	}
- }
+}
  
 
  
@@ -157,8 +141,12 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 			
 			while(loopNode != *tp)
 			{
+				if(p == loopNode && loopNode == (*tp)->p_next)
+				{
+					return removeProcq(tp);
+				}
 				
-				if(loopNode == p)
+				else if(loopNode == p)
 				{
 					
 					(p->p_next)->p_previous = (p->p_previous);
@@ -167,7 +155,10 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 					return p;
 				}
 				
-				loopNode = loopNode->p_next;
+				else
+				{		
+					loopNode = loopNode->p_next;
+				}
 			}
 			
 			return(NULL);			
@@ -176,7 +167,6 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 	}
  
 }
- 
  /*Return first ProcBlk from process queue.*/
 pcb_t *headProcQ(pcb_t *tp){
  

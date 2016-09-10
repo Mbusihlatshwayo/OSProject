@@ -272,8 +272,8 @@ int insertBlocked(int *semAdd, pcb_t *p){
 		
 	}
 	
-	insertProcQ(&(newSema->s_procQ), p); /*insert p at the address within the procQ*/
 	p->p_semAdd = semAdd;
+	insertProcQ(&(newSema->s_procQ), p); /*insert p at the address within the procQ*/
 
 	return FALSE;
 }
@@ -310,18 +310,18 @@ p’s semaphore, which is an error condition, return NULL; otherwise,
 return p. */
 
 pcb_t *outBlocked(pcb_t *p){
-	semd_t *semAddress;
-	semAddress = getActiveSem(p->p_semAdd);
+	semd_t *semd;
+	semd = getActiveSem(p->p_semAdd);
 	
-	if (semAddress == NULL) {
+	if (semd == NULL) {
 		return NULL;
 	} else {
 		pcb_t *process;
-		process = outProcQ(&(semAddress->s_procQ), p);
+		process = outProcQ(&(semd->s_procQ), p);
 		
-		if (emptyProcQ(semAddress->s_procQ)) {
-			semAddress = getActiveSem(p->p_semAdd);
-			addToFreeList(semAddress);
+		if (emptyProcQ(semd->s_procQ)) {
+			semd = getActiveSem(p->p_semAdd);
+			addToFreeList(semd);
 		}
 		
 		return process;

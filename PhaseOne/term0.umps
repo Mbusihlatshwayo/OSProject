@@ -19,4 +19,7 @@ insertBlocked test #1 started
 insertBlocked test #2 started  
 removeBlocked test started   
 insertBlocked and removeBlocked ok   
-outBlocked: removed same process twice.kernel panic()
+headBlocked and outBlocked ok   
+ASL module ok   
+So Long and Thanks for All the Fish
+System halted 

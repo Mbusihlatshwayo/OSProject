@@ -19,4 +19,4 @@ insertBlocked test #1 started
 insertBlocked test #2 started  
 removeBlocked test started   
 insertBlocked and removeBlocked ok   
-headBlocked(1): wrong process returned   kernel panic()
+outBlocked: removed same process twice.kernel panic()

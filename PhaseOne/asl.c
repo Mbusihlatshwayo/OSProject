@@ -237,7 +237,7 @@ pcb_t *headBlocked(int *semAdd){
 		return NULL;
 	}
 	
-	headBlock = returnedSema->s_procQ;
+	headBlock = headProcQ(returnedSema->s_procQ);
 	return headBlock;
 
 }

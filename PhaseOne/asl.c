@@ -141,48 +141,67 @@ HIDDEN semd_t *addSema(semd_t *sema, int *semAdd)
 }
 
 /*Remove empty sema4 from ASL list and update list*/
-HIDDEN semd_t *removeSema(semd_t *sema){
+HIDDEN semd_t *removeSema(int *semaAdd){
 	
-	semd_t *loopSema;
-	
-	loopSema = semd_h;
+	semd_t *loopSema = semd_h;
+	semd_t *removedSema;
 	
 	/*if the head pointer's next is the sema we are moving, update it.*/
-	if(semd_h->s_next == sema)
+	if((semd_h->s_next)->s_semAdd == semaAdd)
 	{
-		/*check if sema is not the only one on the ASL list*/
-		if(sema->s_next != NULL)
+		removedSema = semd_h->s_next;
+		
+		/*check if sema being removed is not the only one on the ASL list*/
+		if(removedSema->s_next == NULL)
 		{
-			semd_h->s_next = sema->s_next;
+			semd_h->s_next = NULL;
 		}
 		
 		else
 		{	
-			semd_h->s_next = NULL;
+			semd_h->s_next = removedSema->s_next;
 		}
 		
-		sema->s_next = NULL;
-		sema->s_semAdd = NULL;
-		return sema;
+		return removedSema;
 	}
 		
 	/*loop through ASL list to find where sema is that we are removing*/
 	while(loopSema->s_next !=NULL)
 	{
 		/*when we find it, update and return it*/
-		if(loopSema->s_next ==sema)
-		{
-			loopSema->s_next = sema->s_next;
-			sema->s_next = NULL;
-			sema->s_semAdd = NULL;
+		if((loopSema->s_next)->s_semAdd == semaAdd)
+		{	
+			/*If sema being removed is at end of the list, set previous sema's next to be null*/
+			if((loopSema->s_next)->s_next == NULL)
+			{
+				removedSema = loopSema->s_next;
+				loopSema->s_next = NULL;
+				removedSema->s_next = NULL;
+				
+				return removedSema;
+				
+			}
 			
-			return sema;
+			/*else set previous sema's next to be where removed sema's next was*/
+			else
+			{	
+				removedSema = loopSema->s_next;
+				loopSema->s_next = removedSema->s_next;
+				removedSema->s_next = NULL;
+				
+				return removedSema;
+			}
+			
 		}
-		
-		loopSema = loopSema->s_next;
+		else
+		{
+
+			loopSema = loopSema->s_next;
+		}
+
 	}
 	
-	return sema;
+	return NULL; /*Should never get here*/
 	
 }
 
@@ -270,8 +289,9 @@ int insertBlocked(int *semAdd, pcb_t *p){
 		
 	}
 	
-	insertProcQ(&(newSema->s_procQ), p); /*insert p at the address within the procQ*/
+	
 	p->p_semAdd = semAdd;
+	insertProcQ(&(newSema->s_procQ), p); /*insert p at the address within the procQ*/
 
 	return FALSE;
 }
@@ -284,18 +304,18 @@ descriptor from the ASL and return it to the semdFree list. */
 
 pcb_t *removeBlocked(int *semAdd){
 	
-	semd_t *semAddress;
-	semAddress = getActiveSem(semAdd);
+	semd_t *sema;
+	sema = getActiveSem(semAdd);
 	
-	if (semAddress == NULL) {
+	if (sema == NULL) {
 		return NULL;
 	} else {
 		pcb_t *process;
-		process = removeProcQ(&(semAddress->s_procQ));
+		process = removeProcQ(&(sema->s_procQ));
 		
-		if(emptyProcQ(semAddress->s_procQ)) {
-			semAddress = removeSema(semAddress);
-			addToFreeList(semAddress);
+		if(emptyProcQ(sema->s_procQ)) {
+			sema = removeSema(semAdd);
+			addToFreeList(sema);
 		}
 		
 		return process;

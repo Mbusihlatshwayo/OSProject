@@ -4,8 +4,8 @@
  * The maintenance of a single sorted list of active semaphore descriptors
  * 		each of which supports a queue of ProcBlks
  * 
- * this list is handle by using a single linked linear linked list with a
- * dummy head node
+ * Both the active and free list ASL lists are handled by using a single linked 
+ * linear linked list with a dummy head node
  * 
  ****************************************************************************/
 

@@ -25,6 +25,17 @@
 #define INTERVALTMR	0x10000020	
 #define TIMESCALEADDR	0x10000024
 
+/* reserved areas*/
+#define ADDRESS1 0x10000000
+#define NEWSYSCALL 0x200003D4
+#define NEWTRAP 0x200002BC
+#define NEWTLB 0x200001A4
+#define NEWINTERRUPT 0x2000008C
+
+/*semaphore number for devices*/
+#define DEVICELISTNUM 8
+#define DEVICENUM 6
+
 
 /* utility constants */
 #define	TRUE		1
@@ -45,7 +56,6 @@
 #define SYSTRAP		2
 
 #define TRAPTYPES	3
-
 
 /* device interrupts */
 #define DISKINT		3
@@ -88,5 +98,25 @@
 #define STCK(T) ((T) = ((* ((cpu_t *) TODLOADDR)) / (* ((cpu_t *) TIMESCALEADDR))))
 #define LDIT(T)	((* ((cpu_t *) INTERVALTMR)) = (T) * (* ((cpu_t *) TIMESCALEADDR))) 
 
+/* hexadecimal values for IE, KU, BEV, and VM (for Status)*/
+#define ALLOFF 0x00000000	/* everything is off bit */
+#define IEc 0x00000001		/* global interrupt enable bit */
+#define KUc 0x00000002		/* The “current” kernel-mode user-mode control bit.*/
 
+#define IEp 0x00000004		/* the “previous” settings of the Status.IEc */
+#define KUp 0x00000008		/* the “previous” settings of the Status.KUc*/
+#define IEo 0x00000010		/* the “previous” settings of the Status.IEp*/
+#define KUo 0x00000020		/* the “previous” settings of the Status.KUp*/
+
+#define IM  0x0000ff00		/* Interrupt Mask. An 8-bit mask that enables/disables external interrupts.*/
+
+#define BEV 0x00400000		/* The Bootstrap Exception Vector. This bit determines the starting address for the exception vectors.*/
+
+#define VMc 0x01000000		/* The “current” VM on/off flag bit. Status.VMc=0 indicates that virtual memory translation is currently off.*/
+#define VMp 0x02000000		/* the “previous” setting of the Status.VMc bit*/
+#define VMo 0x04000000		/* the “previous” setting of the Status.VMp bit*/
+
+#define TE  0x08000000		/* the processor Local Timer enable bit. A 1-bit mask that enables disables the processor’s Local Timer.*/
+
+/*-------------------------------------------------------------------*/
 #endif

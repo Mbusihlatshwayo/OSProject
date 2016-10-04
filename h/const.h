@@ -31,6 +31,10 @@
 #define NEWTRAP 0x200002BC
 #define NEWTLB 0x200001A4
 #define NEWINTERRUPT 0x2000008C
+#define OLDSYSCALL 0x20000348
+#define OLDTRAP 0x20000230
+#define OLDTLB 	0x200001A4
+#define OLDINTERRUPT 0x20000000
 
 /*semaphore number for devices*/
 #define DEVICELISTNUM 8

@@ -12,6 +12,7 @@
 #include "../e/exceptions.e"
 #include "../e/interrupts.e"
 #include "../e/scheduler.e"
+#include "/usr/local/include/umps2/umps/libumps.e"
 
 /****************Module global variables****************/
 int processCount;
@@ -110,4 +111,17 @@ int main()
 
 	  insertProcQ(&readyQueue, p);
 	  scheduler();
+}
+
+/*copy before context switch to after*/
+void moveState(state_t *previous, state_t *current ) {
+	
+	previous->s_asid = current->s_asid;
+	previous->s_cause = current->s_cause;
+	previous->s_status = current->s_status;
+	previous->s_pc = current->s_pc;
+	for (int i = 0; i <= STATEREGNUM; i++) {
+		previous->s_reg[i] = current->s_reg[i];
+	}
+	
 }

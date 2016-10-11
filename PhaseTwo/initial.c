@@ -105,7 +105,7 @@ int main()
 	  (p->p_s).s_pc = test(); /*need to move p2test from Mikey's dir*/
 	  (p->p_s).s_t9 = test();
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
-	  (p->p_s).s_status = ALLOFF | 0x0800ff04; /* sum of all the status bit values from const.h*/
+	  (p->p_s).s_status = ALLOFF | TE | IEc | KUc; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
 	  
 	  
 

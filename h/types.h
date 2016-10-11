@@ -70,6 +70,7 @@ typedef struct pcb_t {
 					
 	state_t			 p_s;     /* processor state*/
 	int 			*p_semAdd;/*pointer to sema4 on which process blocked*/
+	cpu_t            p_CPUTime;
 	
 } pcb_t;
 

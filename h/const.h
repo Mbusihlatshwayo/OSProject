@@ -18,6 +18,16 @@
 
 #define ROMPAGESTART	0x20000000	 /* ROM Reserved Page */
 
+/* SYSCALL values*/
+#define CREATEPROCESS 1
+#define TERMINATEPROCESS 2
+#define VERHOGEN 3
+#define PASSEREN 4
+#define EXCEPTION 5
+#define GETCPUTIME 6
+#define WAITFORCLOCK 7 
+#define WAITFORIODEVICE 8
+
 
 /* timer, timescale, TOD-LO and other bus regs */
 #define RAMBASEADDR	0x10000000

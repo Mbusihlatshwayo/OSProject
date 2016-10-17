@@ -43,8 +43,3 @@ void scheduler(){
 	/* context switch*/
 	LDST(&(currentProcess->p_s));
 }
-
-void continueCurrentProcess(state_t *process){
-	/* load the state of the current process*/
-	LDST(process);
-}

@@ -8,6 +8,7 @@
 #include "../h/const.h"
 #include "../h/types.h"
 #include "../e/pcb.e"
+#include "../e/initial.e"
 #include "../e/asl.e"
 #include "/usr/local/include/umps2/umps/libumps.e"
 
@@ -88,6 +89,25 @@ int syscallHandler(){
 
 int programTrapHandler(){
 	
+	if(currentProcess->p_newPGM == NULL) {
+		
+		currentProcess.terminateProcess();
+		
+		currentProcess = NULL;
+		
+		scheduler();
+		
+	} else {
+		
+		moveState(oldProgram, currentProcess->p_oldPGM);
+		
+		moveState(currentProcess->p_newPGM, currentProcess->p_s);
+		
+		LDST(&currentProcess->p_s);
+		
+	}
+	
+	
 }
 
 void terminateProcess()
@@ -110,7 +130,7 @@ void createProcess(state_t *processState) {
 	
 	if (newProcess == NULL) {
 	/* set the v0 register to -1 we had an error*/
-	currentProc->p_s.s_v0 = -1;	
+	currentProcess->p_s.s_v0 = -1;	
 	}
 	
 	/* we were successful in creating a new proc 
@@ -120,29 +140,29 @@ void createProcess(state_t *processState) {
 	
 	processCount++;
 	insertChild(currentProcess, newProcess);
-	insertProcQ(&ReadyQueue, newProcess);
+	insertProcQ(&readyQueue, newProcess);
 	
 	/* set the v0 register to 0 it was successful*/
-	currentProc->p_s.s_v0 = 0;	
+	currentProcess->p_s.s_v0 = 0;	
 	/* calls load state with the current process state */ 
-	continueCurrentProces(&(currentProcess->p_s));
+	LDST(&(currentProcess->p_s));
 
 }
 
 void getCPUTime() {
 	
 	/* place the processor time in microseconds in the v0 reg */
-	currentProccess->p_s.s_v0 = currentProcess->p_CPUTime;
+	currentProcess->p_s.s_v0 = currentProcess->p_CPUTime;
 
 	/* load the state of the process to continue */ 
-	LDST(currentProcess->p_s);
+	LDST(&(currentProcess->p_s));
 }
 
 void verhogen(int *semaddr) {
 
-	if (oldState->p_s.s_a1 <= 0) {
+	if (currentProcess->p_s.s_a1 <= 0) {
 		
-		p = removeBlocked(oldState->p_s.s_a1);
+		p = removeBlocked(&(currentProcess->p_s.s_a1));
 		insertProcQ(&readyQueue, p);
 		/* check if these should be inside the if statement??*/
 		oldState->s_pc = oldState->s_pc + 4;
@@ -154,7 +174,7 @@ void verhogen(int *semaddr) {
 void passeren(int *semaddr) {
 	
 	if(oldState->p_s.s_a1 < 0) {
-		moveState(oldState, p)
+		moveState(oldState, p);
 		insertBlocked(oldState->p_s.s_a1, currentProcess);
 		scheduler();
 		
@@ -169,17 +189,32 @@ void passeren(int *semaddr) {
 
 void exception(int type, state_t *oldP, state_t *newP) {
 	
-	state_t *typeException;
-	typeException = oldState->p_s.s_a1;
-	
-	(devregarea_t*) addressProcState;
-	addressProcState = oldState->p_s.s_a2;
-	
-	state_t *procState;
-	procState = oldState->p_s.s_a3;
-	
-	 	
+	if(currentProcess->p_newTLB != NULL && currentProcess->p_newPGM != NULL && currentProcess->p_newSys) {
 		
+		currentProcess.terminateProcess();
+		scheduler();
+		
+	}
+	else {
+		/*6 fields as ptrs to states (2 for each flag)*/
+		memaddr *oldTLB;
+		memaddr *newTLB;
+		currentProcess->p_oldTLB = oldP->p_s.s_a1;
+		currentProcess->p_newTLB = newP->p_s.s_a1;
+		
+		memaddr *oldPGM;
+		memaddr *newPGM;
+		currentProcess->p_oldPGM = oldP->p_s.s_a2;
+		currentProcess->p_newPGM = newP>p_s.s_a2;
+		
+		memaddr *oldSys;
+		memaddr *newSys;
+		currentProcess->p_oldSys = oldP->p_s.s_a3;
+		currentProcess->p_newSys = newP->p_s.s_a3;
+		
+		LDST(&(currentProc->p_s));
+	}
+			
 }
 
 /*SYS 8*/
@@ -189,7 +224,7 @@ void waitForClock(){
 
 	if(clockTimer< 0){
 
-		insertBlocked(&(clockSem),currentProcess);
+		insertBlocked(&(clockTimer),currentProcess);
 		
 		STCK(endTOD);
 

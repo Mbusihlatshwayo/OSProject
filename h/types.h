@@ -73,12 +73,12 @@ typedef struct pcb_t {
 	cpu_t            p_CPUTime;
 	
 	/*6 fields as ptrs to states (2 for each flag)*/
-	state_t 		p_oldTLB;
-	state_t 		p_newTLB;
-	state_t 		p_oldPGM;
-	state_t 		p_newPGM;
-	state_t 		p_oldSys;
-	state_t 		p_newSys;
+	state_t 		*p_oldTLB;
+	state_t 		*p_newTLB;
+	state_t 		*p_oldPGM;
+	state_t 		*p_newPGM;
+	state_t 		*p_oldSys;
+	state_t 		*p_newSys;
 	
 } pcb_t;
 

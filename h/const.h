@@ -23,10 +23,10 @@
 #define TERMINATEPROCESS 2
 #define VERHOGEN 3
 #define PASSEREN 4
-#define EXCEPTION 5
+#define SPECTRAPVEC 5
 #define GETCPUTIME 6
-#define WAITFORCLOCK 7 
-#define WAITFORIODEVICE 8
+#define WAITCLOCK 7 
+#define WAITIO 8
 
 
 /* timer, timescale, TOD-LO and other bus regs */

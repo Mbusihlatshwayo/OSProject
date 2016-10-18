@@ -39,7 +39,7 @@ int main()
 	 /* declare and initialize device area*/
 	 devregarea_t*deviceArea;
 	 deviceArea = (devregarea_t*) ADDRESS1;
-	 
+	 move
 	 /*init RAMPTOP*/
 	 unsigned int RAMTOP;
 	 RAMTOP = (deviceArea->rambase) + (deviceArea->ramsize);

@@ -10,10 +10,11 @@
 
 #include "../h/types.h"
 
+extern cpu_t endTOD;
+
 extern int syscallHandler();
 extern int tlbHandler();
 extern int programTrapHandler();
-extern int exceptionHandler();
 extern void createProcess(state_t *statep);
 extern void terminateProcess();
 extern void verhogen(int *semaddr);

@@ -18,6 +18,10 @@
 
 #define ROMPAGESTART	0x20000000	 /* ROM Reserved Page */
 
+/*Clock values*/
+#define pseudoSec 100000000 /*time put into LDIT*/
+#define timeSlice 5000 	 /*time set for timers*/
+
 /* SYSCALL values*/
 #define CREATEPROCESS 1
 #define TERMINATEPROCESS 2

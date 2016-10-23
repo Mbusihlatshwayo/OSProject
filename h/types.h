@@ -77,8 +77,8 @@ typedef struct pcb_t {
 	state_t 		*p_newTLB;
 	state_t 		*p_oldPGM;
 	state_t 		*p_newPGM;
-	state_t 		*p_oldSys;
-	state_t 		*p_newSys;
+	state_t 		*p_oldSYS;
+	state_t 		*p_newSYS;
 	
 } pcb_t;
 

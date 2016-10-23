@@ -1,7 +1,9 @@
 /*****************************  Initial.c  *************************************** 
- * Description here
+ * This module implements main() which initializes the nuclues global variables,
+ * The device areas, and the sema4 list.
  * 
- * 
+ * Helper functions: 
+ * 		moveState: copies process state before context switch
  * 
  ****************************************************************************/
 
@@ -15,12 +17,13 @@
 #include "/usr/local/include/umps2/umps/libumps.e"
 
 /****************Module global variables****************/
-int processCount;
-int softBlockCount;
-pcb_t * currentProcess;
-pcb_t *readyQueue;
-int deviceList[DEVICELISTNUM][DEVICENUM];
-int clockTimer;
+int processCount; 								/*The count of the number of processes in the system*/
+int softBlockCount;								/*The number of processes in the system currently blocked and waiting for an interrupt*/
+pcb_t * currentProcess;							/*A ptr to a PCB that reps the current executing process*/
+pcb_t *readyQueue;								/*A tail ptr to a queue pf PCBs repping proccesses that are ready & waiting for execution turn*/
+int deviceList[DEVICELISTNUM][DEVICENUM];		/*List of nucleus maintained sema4s*/
+int clockTimer;									/*The clock sema4*/
+cpu_t startTOD;									/*The TOD clock start*/
 
 
 
@@ -37,9 +40,9 @@ int main()
 	 
 	 
 	 /* declare and initialize device area*/
-	 devregarea_t*deviceArea;
+	 devregarea_t *deviceArea;
 	 deviceArea = (devregarea_t*) ADDRESS1;
-	 move
+	
 	 /*init RAMPTOP*/
 	 unsigned int RAMTOP;
 	 RAMTOP = (deviceArea->rambase) + (deviceArea->ramsize);
@@ -50,10 +53,11 @@ int main()
 	 *  set the status (all 4 is the same): VM off, interrupts masked, supervisor mode ON
 	 * set the PC to address of correct function. This is different for all 4.
 	 */
+	  state_t *newState;
 	  
 	  /* declare and initialize SYSCALL new area*/
-	  state_t *newState;
 	  newState = (state_t *) NEWSYSCALL;
+	  /*Question: Do we need to call STST(newState) here?*/
 	  newState->s_pc = (memaddr) syscallHandler();
 	  newState->s_t9 = (memaddr) syscallHandler();
 	  newState->s_sp = RAMTOP;
@@ -61,6 +65,7 @@ int main()
 	  
 	  /* declare and initialize Program Trap new area */
 	  newState = (state_t *) NEWTRAP;
+	  /*Question: Do we need a moveState here?*/
 	  newState->s_pc = (memaddr) programTrapHandler();
 	  newState->s_t9 = (memaddr) programTrapHandler();
 	  newState->s_sp = RAMTOP;
@@ -68,6 +73,7 @@ int main()
 	  
 	  /* declare and initialize Memory Management new area */
 	  newState = (state_t *) NEWTLB;
+	  /*Question: Do we need a moveState here?*/
 	  newState->s_pc = (memaddr) tlbHandler();
 	  newState->s_t9 = (memaddr) tlbHandler();
 	  newState->s_sp = RAMTOP;
@@ -75,6 +81,7 @@ int main()
 	  
 	  /* declare and initialize Interrupt new area */
 	  newState = (state_t *) NEWINTERRUPT;
+	  /*Question: Do we need a moveState here?*/
 	  newState->s_pc = (memaddr) interruptHandler();
 	  newState->s_t9 = (memaddr) interruptHandler();
 	  newState->s_sp = RAMTOP;
@@ -90,20 +97,22 @@ int main()
 		  }
 	  }
 	  
-	  clockTimer = 0;
+	  /*Init clock stuff*/
+	  clockTimer = 0; 		
+	  setTIMER(timeSlice);	
+	  /*Question: Do we need LDIT here?*/
 	  
 	  
 	  /*Init first process for Ready Queue. 
 	   * 	Status: Interrupts on, VM off, Local Timer on, kernel-mode on
 	   * 	SP: RAMTOP-FRAMESIZE
 	   * 	PC: test() (from p2test)
-	   */
-	   
+	   */ 
 	  pcb_t *p = allocPcb();
 	  
 	  processCount++;
-	  (p->p_s).s_pc = test(); /*need to move p2test from Mikey's dir*/
-	  (p->p_s).s_t9 = test();
+	  (p->p_s).s_pc = (memaddr) test; /*Question: Do we need to move p2test from Mikey's dir?*/
+	  (p->p_s).s_t9 = (memaddr) test;
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
 	  (p->p_s).s_status = ALLOFF | TE | IEc | KUc; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
 	  
@@ -116,12 +125,14 @@ int main()
 /*copy before context switch to after*/
 void moveState(state_t *previous, state_t *current ) {
 	
-	previous->s_asid = current->s_asid;
-	previous->s_cause = current->s_cause;
-	previous->s_status = current->s_status;
-	previous->s_pc = current->s_pc;
+	current->s_asid = previous->s_asid;
+	current>s_cause = previous->s_cause;
+	current->s_status = previous->s_status;
+	current->s_pc = previous->s_pc;
+	
+	/*Question: Do we need a while loop here?*/
 	for (int i = 0; i <= STATEREGNUM; i++) {
-		previous->s_reg[i] = current->s_reg[i];
+		current->s_reg[i] = previous->s_reg[i];
 	}
 	
 }

@@ -1,7 +1,9 @@
 /*****************************  Scheduler.c  *************************************** 
- * Description here
+ * This module implements a simple round-robin process scheduler with a time slice of
+ * 5 miliseconds. It also performs deadlock detection.
  * 
- * 
+ * Helper Functions:
+ * 		loadState: Performs LDST command on passed in state_t ptr. (for debugging purposes)
  * 
  ****************************************************************************/
 
@@ -14,32 +16,43 @@
 
 void scheduler(){
 	
+	/*If we don't have a current process, get one going!*/
 	if(currentProcess == NULL){
-		/* if the process count is zero invoke the HALT ROM  service*/
-		if(processCount == 0) {
+		
+		/*If we want a new currentProcess, but the readyQ doesn't have anything, handle it one of three ways:*/
+		if(emptyProcQ(readyQueue)){
 			
-			HALT();
-			
-		}
-		/* deadlock is defined when the process count > 0 and the soft block count is zero*/ 
-		else if (processCount > 0 && softBlockCount == 0) {
-			
-			PANIC();
-			
-		}
-		/* if processCount > 0 and softblock count > 0 we WAIT */
-		else if (processCount > 0 && softBlockCount > 0) {
-			
-			WAIT();
-			
+			/* if the process count is zero invoke the HALT ROM  service*/
+			if(processCount == 0) {
+				
+				HALT();
+				
+			}
+			/* Oh no - Deadlock is defined when the process count > 0 and the soft block count is zero*/ 
+			else if (processCount > 0 && softBlockCount == 0) {
+				
+				PANIC();
+				
+			}
+			/* else processCount > 0 and softblock count > 0 so we WAIT */
+			else{
+				/*  */
+				setTIMER(pseudoSec);
+				setSTATUS((getSTATUS() | IEc | IM));
+				WAIT();
+				
+			}
 		}
 	}
 	
-	/* if current process is not empty take from the ready queue*/
+	/* if readyQueue is not empty, take a process*/
 	currentProcess = removeProcQ(&readyQueue);
 	
-	/* add time */
-	
 	/* context switch*/
-	LDST(&(currentProcess->p_s));
+	loadState(&(currentProcess->p_s));
+}
+
+void loadState(state_t *state){
+	LDST(state);
+	
 }

@@ -1,7 +1,8 @@
 /*****************************  Exceptions.c  *************************************** 
- * Description here
+ * This module handles Syscall/Bp Exceptions (1-8), Pgm Trap Exceptions, and
+ * TLB Exceptions. 
  * 
- * 
+ * Helper Functions:
  * 
  ****************************************************************************/
 
@@ -15,7 +16,6 @@
 /****************Module global variables****************/
 
 cpu_t endTOD;
-cpu_t startTOD;
 
 state_t *oldSys = (state_t *) OLDSYSCALL;
 state_t *oldProgram = (state_t *) OLDTRAP;
@@ -33,21 +33,23 @@ state_t *oldTLB = (state_t *) OLDTLB;
  * 		the current processor state.*/
 int tlbHandler(){
 		
-	if(currentProcess->p_newTLB == NULL) { /*Question: Is this the right check?*/
+	/*If the current process does not have a value for newTLB, kill it*/	
+	if(currentProcess->p_newTLB == NULL) { 
 		
-		terminateProcess(); /*Question: Is it okay to call Sys2 here?*/
+		terminateProcess(); 
 		
 		currentProcess = NULL;
 		
 		scheduler();
 		
+	/*else "pass it up"*/	
 	} else {
 		
 		moveState(oldTLB, currentProcess->p_oldTLB);
 		
-		moveState(currentProcess->p_newTLB, &(currentProcess->p_s)); /*Question: Will this do the moving of new TLB state to current proc state?*/
+		moveState(currentProcess->p_newTLB, &(currentProcess->p_s)); 
 		
-		LDST(&currentProcess->p_s);
+		loadState(&currentProcess->p_s);
 		
 	}
 	
@@ -64,41 +66,26 @@ int tlbHandler(){
  * 		the current processor state.*/
 int programTrapHandler(){
 	
-	if(currentProcess->p_newPGM == NULL) { /*Question: Is this the right check?*/
+	/*If the current process does not have a value for newPGM, kill it*/
+	if(currentProcess->p_newPGM == NULL) { 
 		
-		terminateProcess(); /*Question: Is it okay to call Sys2 here?*/
+		terminateProcess(); 
 		
 		currentProcess = NULL;
 		
 		scheduler();
 		
+	/* else, "pass it up"*/
 	} else {
 		
 		moveState(oldProgram, currentProcess->p_oldPGM);
 		
-		moveState(currentProcess->p_newPGM, &(currentProcess->p_s)); /*Question: Will this do the moving of new PGM state to current proc state?*/
+		moveState(currentProcess->p_newPGM, &(currentProcess->p_s)); 
 		
-		LDST(&currentProcess->p_s);
+		loadState(&currentProcess->p_s);
 		
 	}
 	
-	
-}
-
-/*****************Interrupt Exception Handling******************/
-
-/* Occurs: When either a previously initiated I/O request completes or when either a processor Local
- * 		Timer/Interval Timer makes a 0x0000.0000 -> 0xFFFF.FFFF transition
- * 
- * Execute actions:
- * 1) Acknowledge the outstanding interrupt by writing acknowledge command code or a new command in the 
- * 		interrupting device's  device register.
- * 2) Perform V operation on the sema4 associated with the interrupting (sub)device and pseudo-clock sema4.
- * 3) If SYS8was requested prior to the handling of this interrupt, store the interrupting (sub)device's 
- * 		status word in the newly unblocked process'es v0. Alternatively if SYS8 has not been called, 
- * 		store off the word until SYS8 is eventually called.*/
-int exceptionHandler(){
-	/* In notes for 10/17 and vids */
 	
 }
 
@@ -114,18 +101,37 @@ int syscallHandler(){
 	currentProcess->p_s.s_pc = (currentProcess->p_s.s_pc)+4;
 	
 	/*set kernelMode*/
-	int kernelMode = (oldSys->s_status & KUp); /*Question: this is how we see is KUp is on correct?*/
+	int kernelMode = (oldSys->s_status & KUp);
 	
+	/*If syscall is 9 or greater, kill it or pass up*/
 	if (oldSys->s_a0 >= 9) {
 		
-		/*pass up or die: This part is in p.23 in blue book (or can we just call SYS2?)*/
+		/*If the current process does not have a value for newTLB, kill it*/	
+		if(currentProcess->p_newSYS == NULL) { 
+			
+			terminateProcess(); 
+			
+			currentProcess = NULL;
+			
+			scheduler();
+			
+		/*else "pass it up"*/	
+		} else {
+			
+			moveState(oldSys, currentProcess->p_oldSYS);
+			
+			moveState(currentProcess->p_newSYS, &(currentProcess->p_s)); 
+			
+			loadState(&currentProcess->p_s);
+			
+		}
 		
 	} 
 	/* check if we are in kernel mode and the syscall is from 1-8 */
-	else if (oldSys->s_a0 < 9 && kernelMode != 0) {
+	if (oldSys->s_a0 < 9 && kernelMode != 0) {
 		switch (oldSys->s_a0){
 			case CREATEPROCESS: 		
-				createProcess((state_t *) oldSys->s_a1);  /*Question: Conflicting types warnings on these function calls??*/
+				createProcess((state_t *) oldSys->s_a1);  
 			
 			break;
 			
@@ -209,7 +215,7 @@ void createProcess(state_t *statep) {
 	}
 		
 	/* calls load state with the current process state */ 
-	LDST(&(currentProcess->p_s));
+	loadState(&(currentProcess->p_s));
 
 }
 
@@ -217,77 +223,133 @@ void createProcess(state_t *statep) {
  * process are terminated as well.*/
 void terminateProcess()
 {
-	/*check if current process has been annihilated*/
-	if (!currentProcess) {
-		return;
+	/*call SYS2 recursively in order to get rid all children*/
+	while(!emptyChild(currentProcess)){
+		
+		currentProcess = removeChild(currentProcess);
+		terminateProcess();
 	}
 	
-	outChild(currentProcess);
+	/*check if current process has been annihilated*/
+	if (!currentProcess) {
+		
+		outChild(currentProcess);
+		
+		currentProcess = NULL;
 
-	currentProcess = NULL;
+	}
+	
+	/*Check if the currentProcess is blocked*/
+	else if (currentProcess->p_semAdd != NULL)
+	{
+		outBlocked(currentProcess);
+		
+		/*if the semaAdd is not the clock, subtract a softBlk*/
+		if((currentProcess->p_semAdd) > &(deviceList[0][0])){
+			
+			softBlockCount = softBlockCount -1;
+		}
+		
+		/*The semAdd is the clock*/
+		else{
+			*(currentProcess->p_semAdd) = *(currentProcess->p_semAdd + 1);
+			
+		}
+		
+		
+	}
+	
+	/*else the currentProcess is on the readyQueue so call outProcQ*/
+	else{
+		outProcQ(&(readyQueue), currentProcess);
+		
+	}
+	
+	freePCB(currentProcess); /*put it on the free PCB list beacuse it is now been officially killed*/
+	processCount = processCount - 1; /*One less process to worry about. */
+	
+	
+
 }
 
 /*Syscall 3 (or "V Operation) causes the sema4 from the address given to be signaled and incremented*/
 void verhogen(int *semaddr) {
 	
-	/*This is in 10/5 notes*/
+	*(semaddr) = *(semaddr)+1; /* Increment the int pointed ay by currentProcess->p_s.s_a1 */
+	
+	pcb_t *p;
+	p = removeBlocked(semaddr);
 
-	if (currentProcess->p_s.s_a1 <= 0) { /*Question: in notes, this was OldSys but this actually has to be a process to use p_s right?*/
-		
-		pcb_t *p;
-		p = removeBlocked(semaddr); 	/*Question: is "p" currentProcess or a new PCB?*/
+	/*If p exists based on the address given, put it on the readyQueue*/
+	if (p != NULL) {
+					
 		insertProcQ(&readyQueue, p);
 	}
-	/* Question: should be inside the if statement?*/
+
 	oldSys->s_pc = oldSys->s_pc + 4;
-	LDST(oldSys);
+	loadState(oldSys);				/*Non-blocking call*/
 	
 }
 
 /*Syscall 4 (or "P Operation) causes the sema4 from the address given to be told to wait and decremented*/
 void passeren(int *semaddr) {
 	
-	if(currentProcess->p_s.s_a1 < 0) { /*Question: same as line 228*/
+	*(semaddr) = *(semaddr)-1; /* Decrement the int pointed ay by currentProcess->p_s.s_a1 */
 
-		moveState(oldSys, &(currentProcess->p_s)); 			/*Question: same as line 231*/
-		insertBlocked(&(currentProcess->p_s.s_a1), currentProcess); /*Question: same as line 228*/
-		scheduler();
+	/*If the semaddr is less than 0, block the currentProcess & prep for context switch*/
+	if (*(semaddr) < 0) {
 		
-	} else {
-	
-		oldSys->s_pc = oldSys->s_pc + 4;
-		LDST(oldSys);
-	
+		/*Question: Do we need time stuff in here? WaitForClock uses this...*/
+		
+		moveState(oldSys, &(currentProcess->p_s));		
+		insertBlocked(semaddr, currentProcess);
+		scheduler();	/*Blocking call*/
 	}
+	
+	oldSys->s_pc = oldSys->s_pc + 4;
+	loadState(oldSys);
+	
 	
 }
 
-/* Syscall 5 causes the nucleus to store the processor state at the time of teh exception in that area pointed
+/* Syscall 5 causes the nucleus to store the processor state at the time of the exception in that area pointed
  * to by the address in a2, and loads the new processor state from the area pointed to by the address given in a3.
  * This syscall can only be called at most once for each of the three excpetion types(TLB, PGM, and Syscall). 
  * Any request that that calls this more than that shall be executed (Sys2 style).*/
 void specTrapVec(int type, state_t *oldP, state_t *newP) {
 	
-	if(currentProcess->p_newTLB != NULL || currentProcess->p_newPGM != NULL || currentProcess->p_newSys) {
+	if(currentProcess->p_newTLB != NULL || currentProcess->p_newPGM != NULL || currentProcess->p_newSYS) {
 		
 		terminateProcess();
 		scheduler();
 		
 	}
+	
+	/*type indicates which of the 6 state ptrs should be changed*/
 	else {
-		/*6 fields as ptrs to states (2 for each flag)*/
 		
-		/*Question: How can we get the flags from the params if they are state_t's? Only PCB'a have p_s.
-		currentProcess->p_oldTLB = oldP->p_s.s_a1;
-		currentProcess->p_newTLB = newP->p_s.s_a1;
+		/*If a2 is a 0, it indicates a TLB type*/
+		if(type == 0)
+		{				
+			currentProcess->p_oldTLB = oldP;
+			currentProcess->p_newTLB = newP;
+		}
 		
-		currentProcess->p_oldPGM = oldP->p_s.s_a2;
-		currentProcess->p_newPGM = newP>p_s.s_a2;
-		
-		currentProcess->p_oldSys = oldP->p_s.s_a3;
-		currentProcess->p_newSys = newP->p_s.s_a3;*/
-		
-		LDST(&(currentProcess->p_s));
+		/*If a2 is a 1, it indicates a PGM type*/
+		else if(type == 1)
+		{
+			currentProcess->p_oldPGM = oldP;
+			currentProcess->p_newPGM = newP;
+		}
+
+		/*If a2 is 2, it indicates a Syscall type*/
+		else
+		{
+			currentProcess->p_oldSYS = oldP;
+			currentProcess->p_newSYS = newP;
+		}
+
+		loadState(&(currentProcess->p_s));
 	}
 			
 }
@@ -300,37 +362,48 @@ void getCPUTime() {
 	currentProcess->p_s.s_v0 = currentProcess->p_CPUTime;
 
 	/* load the state of the process to continue */ 
-	LDST(&(currentProcess->p_s));
+	loadState(&(currentProcess->p_s));
 }
 
 /*Syscall 7 performs a P operation on the pseudo-clock timer sema4. This sema4 is V'd every 100 milliseconds automatically by the nucleus*/
 void waitForClock(){
 	
-	clockTimer = clockTimer - 1;
+	passeren(clockTimer);
 
-	if(clockTimer< 0){
-
-		insertBlocked(&(clockTimer),currentProcess);
-		
-		STCK(endTOD);
-
-		currentProcess->p_CPUTime = currentProcess->p_CPUTime + (endTOD - startTOD);
-
-		softBlockCount = softBlockCount + 1;
-
-		currentProcess = NULL;
-
-		scheduler();
-
-	}
-
-	LDST(&(currentProcess->p_s));
+	loadState(&(currentProcess->p_s));
 
 }
 
 /*Syscall 8 performs a P operation on the I/O device sema4 indicated by the values in a1, a2, and optionally a3*/
 void waitForIO(int intlNo, int dnum, int waitForTermRead)
 {
-	/* This is in notes for 10/14/16... I think?*/
+	/*Question: Terminal stuff?*/
+	
+	/*Question: Really just a reminder - if we do need to do time stuff in SYS4, add that here also*/
+	
+	/*Perform a P operation on the correct sema4*/
+	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
+	
+	if(deviceList[intlNo][dnum] < 0){
+		
+		moveState(&(deviceList[intlNo][dnum]), &(currentProcess->p_s)); /*Pointers and such might be wrong here...*/
+				
+		insertBlocked(&(deviceList[intlNo][dnum]), currentProcess);
+		
+		
+		currentProcess = NULL;
+		softBlockCount = softBlockCount - 1;
+		
+		scheduler();	/*Blocking call*/
+	}
+	
+	/*Return the (sub) device's status word in v0
+	currentProcess->p_s.s_v0 = 
+	* 
+	* Question: How do we do the above?
+	*/
+	
+	oldSys->s_pc = oldSys->s_pc + 4;
+	loadState(oldSys);
 	
 }

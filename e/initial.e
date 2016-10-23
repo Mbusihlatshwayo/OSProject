@@ -18,7 +18,10 @@ extern pcb_t * currentProcess;
 extern pcb_t *readyQueue;
 extern int deviceList[DEVICELISTNUM][DEVICENUM];
 extern int clockTimer;
+extern cpu_t startTOD;
+
 extern void moveState(state_t *previous, state_t *current );
+
 
 /***************************************************************/
 

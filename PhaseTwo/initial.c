@@ -17,13 +17,14 @@
 #include "/usr/local/include/umps2/umps/libumps.e"
 
 /****************Module global variables****************/
-int processCount; 								/*The count of the number of processes in the system*/
-int softBlockCount;								/*The number of processes in the system currently blocked and waiting for an interrupt*/
-pcb_t * currentProcess;							/*A ptr to a PCB that reps the current executing process*/
-pcb_t *readyQueue;								/*A tail ptr to a queue pf PCBs repping proccesses that are ready & waiting for execution turn*/
-int deviceList[DEVICELISTNUM][DEVICENUM];		/*List of nucleus maintained sema4s*/
-int clockTimer;									/*The clock sema4*/
-cpu_t startTOD;									/*The TOD clock start*/
+int processCount; 										/*The count of the number of processes in the system*/
+int softBlockCount;										/*The number of processes in the system currently blocked and waiting for an interrupt*/
+pcb_t * currentProcess;									/*A ptr to a PCB that reps the current executing process*/
+pcb_t *readyQueue;										/*A tail ptr to a queue pf PCBs repping proccesses that are ready & waiting for execution turn*/
+int deviceList[DEVICELISTNUM][DEVICENUM];				/*List of nucleus maintained sema4s*/
+unsigned int deviceStatusList[DEVICELISTNUM][DEVICENUM]; /*List of statuses of the nucleus maintained sema4s*/
+int clockTimer;											/*The clock sema4*/
+cpu_t startTOD;											/*The TOD clock start*/
 
 
 
@@ -100,7 +101,7 @@ int main()
 	  /*Init clock stuff*/
 	  clockTimer = 0; 		
 	  setTIMER(timeSlice);	
-	  /*Question: Do we need LDIT here?*/
+	  LDIT(smallPseudoSec);
 	  
 	  
 	  /*Init first process for Ready Queue. 
@@ -111,8 +112,8 @@ int main()
 	  pcb_t *p = allocPcb();
 	  
 	  processCount++;
-	  (p->p_s).s_pc = (memaddr) test; /*Question: Do we need to move p2test from Mikey's dir?*/
-	  (p->p_s).s_t9 = (memaddr) test;
+	  (p->p_s).s_pc = (memaddr) test(); /*Question: Do we need to move p2test from Mikey's dir?*/
+	  (p->p_s).s_t9 = (memaddr) test();
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
 	  (p->p_s).s_status = ALLOFF | TE | IEc | KUc; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
 	  
@@ -126,7 +127,7 @@ int main()
 void moveState(state_t *previous, state_t *current ) {
 	
 	current->s_asid = previous->s_asid;
-	current>s_cause = previous->s_cause;
+	current->s_cause = previous->s_cause;
 	current->s_status = previous->s_status;
 	current->s_pc = previous->s_pc;
 	

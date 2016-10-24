@@ -299,11 +299,15 @@ void passeren(int *semaddr) {
 	/*If the semaddr is less than 0, block the currentProcess & prep for context switch*/
 	if (*(semaddr) < 0) {
 		
-		/*Question: Do we need time stuff in here? WaitForClock uses this...*/
+		/*Store time and change the time it took to process*/
+		STCK(endTOD);
+		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
 		
-		moveState(oldSys, &(currentProcess->p_s));		
+		/*Block process*/
+		moveState(oldSys, &(currentProcess->p_s));	
+		currentProcess->p_semAdd = semaddr;	
 		insertBlocked(semaddr, currentProcess);
-		scheduler();	/*Blocking call*/
+		scheduler();	
 	}
 	
 	oldSys->s_pc = oldSys->s_pc + 4;
@@ -369,6 +373,8 @@ void getCPUTime() {
 void waitForClock(){
 	
 	passeren(clockTimer);
+	
+	softBlockCount = softBlockCount+1;
 
 	loadState(&(currentProcess->p_s));
 
@@ -377,9 +383,22 @@ void waitForClock(){
 /*Syscall 8 performs a P operation on the I/O device sema4 indicated by the values in a1, a2, and optionally a3*/
 void waitForIO(int intlNo, int dnum, int waitForTermRead)
 {
-	/*Question: Terminal stuff?*/
-	
-	/*Question: Really just a reminder - if we do need to do time stuff in SYS4, add that here also*/
+	/*Check if the line number is a terminal based on the constant*/
+	if(intlNo == TERMINT)
+	{
+		/*If we don't want to wait to read it as a ternimal, set the terminal line number.*/
+		if(!waitForTermRead)
+		{
+			intlNo = intlNo - 2;
+			currentProcess->p_s.s_v0 = deviceStatusList[intlNo - 2][dnum]; /*set the status word for a terminal*/
+		}
+	}
+	else
+	{
+		intlNo = intlNo - 3;
+		currentProcess->p_s.s_v0 = deviceStatusList[intlNo - 3][dnum]; /*set the status word*/
+		
+	}
 	
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
@@ -390,18 +409,16 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead)
 				
 		insertBlocked(&(deviceList[intlNo][dnum]), currentProcess);
 		
+		/*Store time and change the time it took to process*/
+		STCK(endTOD);
+		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
+		
 		
 		currentProcess = NULL;
 		softBlockCount = softBlockCount - 1;
 		
 		scheduler();	/*Blocking call*/
 	}
-	
-	/*Return the (sub) device's status word in v0
-	currentProcess->p_s.s_v0 = 
-	* 
-	* Question: How do we do the above?
-	*/
 	
 	oldSys->s_pc = oldSys->s_pc + 4;
 	loadState(oldSys);

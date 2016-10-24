@@ -20,6 +20,7 @@
 
 /*Clock values*/
 #define pseudoSec 100000000 /*time put into LDIT*/
+#define smallPseudoSec 100000 /*time put into LDIR for initial.c*/
 #define timeSlice 5000 	 /*time set for timers*/
 
 /* SYSCALL values*/

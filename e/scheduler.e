@@ -11,7 +11,7 @@
 #include "../h/types.h"
 
 extern void scheduler();
-extern void loadState(state_t *state)
+extern void loadState(state_t *state);
 
 /***************************************************************/
 

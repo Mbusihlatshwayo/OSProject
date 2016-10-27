@@ -2,8 +2,6 @@
  * This module handles Syscall/Bp Exceptions (1-8), Pgm Trap Exceptions, and
  * TLB Exceptions. 
  * 
- * Helper Functions:
- * 
  ****************************************************************************/
 
 #include "../h/const.h"
@@ -11,6 +9,9 @@
 #include "../e/pcb.e"
 #include "../e/initial.e"
 #include "../e/asl.e"
+#include "../e/scheduler.e"
+#include "../e/exceptions.e"
+#include "../e/interrupts.e"
 #include "/usr/local/include/umps2/umps/libumps.e"
 
 /****************Module global variables****************/
@@ -360,7 +361,7 @@ void specTrapVec(int type, state_t *oldP, state_t *newP) {
 
 /*Syscall 6 causes the procesor time (in microseconds) used by the requesting process to be placed/returned to the caller's v0. 
  * This means that the nucleaus must record in the PCB the amount of processor time used by each process*/
-void getCPUTime() {
+void getCPUTime(){
 	
 	/* place the processor time in microseconds in the v0 reg */
 	currentProcess->p_s.s_v0 = currentProcess->p_CPUTime;
@@ -381,8 +382,7 @@ void waitForClock(){
 }
 
 /*Syscall 8 performs a P operation on the I/O device sema4 indicated by the values in a1, a2, and optionally a3*/
-void waitForIO(int intlNo, int dnum, int waitForTermRead)
-{
+void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	/*Check if the line number is a terminal based on the constant*/
 	if(intlNo == TERMINT)
 	{
@@ -393,6 +393,7 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead)
 			currentProcess->p_s.s_v0 = deviceStatusList[intlNo - 2][dnum]; /*set the status word for a terminal*/
 		}
 	}
+	
 	else
 	{
 		intlNo = intlNo - 3;
@@ -403,9 +404,10 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead)
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
 	
-	if(deviceList[intlNo][dnum] < 0){
+	if(deviceList[intlNo][dnum] < 0)
+	{
 		
-		moveState(&(deviceList[intlNo][dnum]), &(currentProcess->p_s)); /*Pointers and such might be wrong here...*/
+		moveState(&(deviceList[intlNo][dnum]), &(currentProcess->p_s)); /*Question: Pointers and such might be wrong here...*/
 				
 		insertBlocked(&(deviceList[intlNo][dnum]), currentProcess);
 		
@@ -424,3 +426,4 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead)
 	loadState(oldSys);
 	
 }
+

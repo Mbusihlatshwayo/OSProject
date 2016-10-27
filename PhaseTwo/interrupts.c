@@ -9,17 +9,313 @@
  * 3) If SYS8was requested prior to the handling of this interrupt, store the interrupting (sub)device's 
  * 		status word in the newly unblocked process'es v0. Alternatively if SYS8 has not been called, 
  * 		store off the word until SYS8 is eventually called.*/
- 
-int exceptionHandler(){
-	/* In notes for 10/17 and vids */
-	
-}
 
 #include "../h/const.h"
 #include "../h/types.h"
 #include "../e/pcb.e"
 #include "../e/asl.e"
+#include "../e/scheduler.e"
+#include "../e/initial.e"
+#include "../e/interrupts.e"
+#include "../e/exceptions.e"
+#include "/usr/local/include/umps2/umps/libumps.e"
 
+/****************Module global variables****************/
+cpu_t endTOD; 
+
+HIDDEN state_t *oldINT = (state_t *) OLDINTERRUPT; /*Old interrupt state area*/
+
+HIDDEN int termReceive = 0; /* set boolean value for if a line is a terminal w/ status recieve*/
+HIDDEN devregarea_t *devregarea = (devregarea_t *) ADDRESS1; /* declare and initialize device area*/
+
+/*******************Helper Functions********************/
+
+/*find the line that the interrupt is on by taking the old cause addr and 'AND'ing it w/ the line addreses (defined by cause bytes 8-15)
+ * Lines:
+ * 		0 - multi core
+ * 		1 & 2 - clocks
+ * 		3 - disk device
+ * 		4 - tape device
+ * 		5 - network device
+ * 		6 - printer device
+ * 		7 - terminal device
+*/
+HIDDEN int findDevLine(memaddr causeAddr){
+	
+	if((causeAddr & LINEADDR_1) !=0){
+		return 1;
+	}
+	else if((causeAddr & LINEADDR_2) !=0){
+		return 2;
+	}
+	else if((causeAddr & LINEADDR_3) !=0){
+		return 3;
+	}
+	else if((causeAddr & LINEADDR_4) !=0){
+		return 4;
+	}
+	else if((causeAddr & LINEADDR_5) !=0){
+		return 5;
+	}
+	else if((causeAddr & LINEADDR_6) !=0){
+		return 6;
+	}
+	else if((causeAddr & LINEADDR_7) !=0){
+		return 7;
+	}
+	else{									
+		return 0; 								
+	}
+}
+
+/*find the device on a specific line that the interrupt is on by getting the word based on the line number and then'AND'ing it w/ the device addreses*/
+HIDDEN int findDev(int lineNo){
+	
+	memaddr intrAddr;
+		
+	/*Get the interrupt addr*/
+	if(lineNo == 3){
+		intrAddr = WORD_0; /*Question: compilation error*/
+	}
+	else if(lineNo == 4){
+		intrAddr = WORD_1;
+	}
+	else if(lineNo == 5){
+		intrAddr = WORD_2;
+	}	
+	else if(lineNo == 6){
+		intrAddr = WORD_3;
+	}
+	else{
+		intrAddr = WORD_4;
+	}
+	
+	/*find the deviceNo*/
+	if((intrAddr & DEVICEADDR_0) == 0){
+		return 0;
+	}
+	else if((intrAddr & DEVICEADDR_1) == 0){
+		return 1;
+	}	
+	else if((intrAddr & DEVICEADDR_2) == 0){
+		return 2;
+	}
+	else if((intrAddr & DEVICEADDR_3) == 0){
+		return 3;
+	}
+	else if((intrAddr & DEVICEADDR_4) == 0){
+		return 4;
+	}
+	else if((intrAddr & DEVICEADDR_5) == 0){
+		return 5;
+	}	
+	else if((intrAddr & DEVICEADDR_6) == 0){
+		return 6;
+	}
+	else if((intrAddr & DEVICEADDR_7) == 0){
+		return 7;
+	}
+	else{
+		return NULL;
+	}
+	
+	
+}
+
+/*Line 7 is a terminal line and because the status is split different than the rest of the lines, it has to be treated differently.*/
+HIDDEN int handleTerminalLine(int semaDevice)
+{
+	/*local vars */
+	unsigned int status;
+	
+	status = &(devregarea->devreg[(semaDevice)]).t_transm_status; /*Question: Does this need to be a pointer? Video 13*/
+	
+	/*if terminal transit is on, acknowledge. else, ack recieve*/
+	if((status &  0x0F) != READY)
+	{
+		devregarea->devreg[(semaDevice)].t_transm_command = ACK; /*Question: Will this work?*/
+	}
+	else
+	{
+		status = &(devregarea->devreg[(semaDevice)]).t_recv_status;
+		devregarea->devreg[(semaDevice)].t_recv_command = ACK;
+		
+		
+		termReceive = 1;
+	}
+	
+	return(status);
+	
+}
+
+/*Loads timers based on the type of clock it is (determined by line)*/
+HIDDEN void handleClockLines(int lineNo)
+{
+	/*Highest priority Local Timer goes right on through to the readyQueue*/
+	if(lineNo == 1)
+	{
+		moveState(oldINT, &(currentProcess->p_s));
+		
+		insertProcQ(&readyQueue, currentProcess);
+		
+		currentProcess = NULL;
+		
+		setTIMER(TIMESLICE); /*Load Local Timer*/
+		
+	}
+	/*Perform V operation on Interval Timer*/
+	else
+	{
+		pcb_t *p;
+		
+		p = removeBlocked(&(clockTimer));
+		
+		while(p != NULL)
+		{
+			insertProcQ(&readyQueue, p);
+			
+			clockTimer = clockTimer + 1;
+			softBlockCount = softBlockCount - 1;
+			
+			p = removeBlocked(&(clockTimer));
+			
+			
+		}
+	
+		LDIT(CPUADDTIME); /*Load Interval Timer*/		
+	}
+}
+
+/*******************Interrupt Handling***********************/
+
+/*Interrupts are handled by lowest number = highest priority*/
 int interruptHandler(){
+	
+	/*Local Vars*/
+
+	device_t *deviceSema; 	/*The device sema4*/
+	pcb_t *p;				/*a pcb that could be blocked, put on the readyQueue, etc.*/
+	
+	int cause; 				/*Holds the value of the old cause status*/ 	
+	int line; 				/*Holds the line number variable*/
+	int lineIndex; 			/*Index of the line (used for sema4 status array)*/
+	int device;				/*Holds the instance (device) number*/
+	int deviceSemaIndex; 	/*Used to find the deviceSema using algebra*/
+	unsigned int intStatus; /*Holds the status of the interrupt*/
+	
+	
+	/*Step 0: Store time and previous state*/
+	cause = oldINT->s_cause;
+		
+	if(currentProcess != NULL)
+	{
+		moveState(oldINT, &(currentProcess->p_s));
+
+		STCK(endTOD);
+
+		currentProcess->p_CPUTime = currentProcess->p_CPUTime + (endTOD - startTOD);
+	}
+	
+	/*Step 1: Determine the line #*/
+	line = findDevLine(cause);
+	
+	/*Check if line number is equal to one of the timers (lines 1 and 2). Else the line is 3-7*/
+	if(line == 1 || line == 2)
+	{
+		handleClockLines(line);
+	}
+	
+	else
+	{
+		/*Step 2: Determine the instance # */
+		device = findDev(line);
+		
+		/*Step 3: Calculate the sema4 for this device*/
+		deviceSemaIndex = (((line - 3) * 8) + device);
+		deviceSema = &(devregarea->devreg[deviceSemaIndex]);
+		
+		/*Step 4: Get/set the status for process v0 & acknowledge the interrupt*/
+		if(line == TERMINT)
+		{
+			intStatus = handleTerminalLine(deviceSemaIndex);
+		}
+		else
+		{
+			intStatus = deviceSema->d_status;
+			
+			deviceSema-> d_command = ACK;
+		}
+		
+		/*Set the line index based on if it is a terminal or not*/
+		lineIndex = line;
+		
+		if(line == TERMINT)
+		{
+			/*Check if the terminal status is a transmit and adjust index accordingly*/
+			if(termReceive != 1)
+			{
+				lineIndex = lineIndex - 2;
+			}
+			
+			lineIndex = lineIndex - 3;
+		}
+		
+		/*Step 5: V the sema4*/
+		deviceList[lineIndex][device] = deviceList[lineIndex][device] + 1;
+		
+		/*Note: The sema4 should always be either 0 or -1 (video 13)*/ 
+		if(deviceSema <= 0)
+		{
+			p = removeBlocked(&(deviceList[lineIndex][device]));
+			
+		}
+		
+		/*If p is equal to NULL, set the status of the sema4 is the sema4 status list (special case is if it it a transmit status terminal line)*/
+		if(p == NULL)
+		{
+			if(line == TERMINT)
+			{
+				if(termReceive != 1)
+				{
+					deviceStatusList[line - 2][device] = intStatus;
+				}
+			}
+			
+			deviceStatusList[line - 3][device] = intStatus;
+			
+		}
+		else
+		{
+			softBlockCount = softBlockCount - 1;
+			
+			(p->p_s).s_v0 = intStatus;	/*Store devices status into the pcb's v0*/
+			
+			insertProcQ(&readyQueue, p); 	/*insert process into readyQueue (job is no longer blocked)*/
+
+		}
+		
+		termReceive = 0; /*reset for next interrupt (else everything would think it is a terminal..Which would be bad*/
+		
+		/*Step 7: Return control to process that was excecuting at the time of the interrupt & fix time (if in wait state, call scheduler)*/
+		if(currentProcess != NULL)
+		{
+			STCK(startTOD);
+			
+			loadState(oldINT);
+		}
+		else
+		{
+			scheduler();
+		}
+		
+	}
+	
+	
+	
+	
+	
+				
+	
+	
 	
 }

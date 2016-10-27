@@ -13,6 +13,7 @@
 #include "../e/asl.e"
 #include "../e/exceptions.e"
 #include "../e/interrupts.e"
+#include "../e/initial.e"
 #include "../e/scheduler.e"
 #include "/usr/local/include/umps2/umps/libumps.e"
 
@@ -26,8 +27,23 @@ unsigned int deviceStatusList[DEVICELISTNUM][DEVICENUM]; /*List of statuses of t
 int clockTimer;											/*The clock sema4*/
 cpu_t startTOD;											/*The TOD clock start*/
 
+/*******************Helper Functions********************/
+/*copy before context switch to after*/
+void moveState(state_t *previous, state_t *current ) {
+	
+	current->s_asid = previous->s_asid;
+	current->s_cause = previous->s_cause;
+	current->s_status = previous->s_status;
+	current->s_pc = previous->s_pc;
+	
+	/*Question: Do we need a while loop here?*/
+	for (int i = 0; i <= STATEREGNUM; i++) {
+		current->s_reg[i] = previous->s_reg[i];
+	}
+	
+}
 
-
+/*******************Main Function***********************/
 int main()
 {
 
@@ -100,8 +116,8 @@ int main()
 	  
 	  /*Init clock stuff*/
 	  clockTimer = 0; 		
-	  setTIMER(timeSlice);	
-	  LDIT(smallPseudoSec);
+	  setTIMER(TIMESLICE);	
+	  LDIT(CPUADDTIME);
 	  
 	  
 	  /*Init first process for Ready Queue. 
@@ -121,19 +137,4 @@ int main()
 
 	  insertProcQ(&readyQueue, p);
 	  scheduler();
-}
-
-/*copy before context switch to after*/
-void moveState(state_t *previous, state_t *current ) {
-	
-	current->s_asid = previous->s_asid;
-	current->s_cause = previous->s_cause;
-	current->s_status = previous->s_status;
-	current->s_pc = previous->s_pc;
-	
-	/*Question: Do we need a while loop here?*/
-	for (int i = 0; i <= STATEREGNUM; i++) {
-		current->s_reg[i] = previous->s_reg[i];
-	}
-	
 }

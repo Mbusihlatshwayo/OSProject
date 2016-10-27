@@ -12,6 +12,7 @@
 #include "../e/pcb.e"
 #include "../e/asl.e"
 #include "../e/initial.e"
+#include "../e/scheduler.e"
 #include "/usr/local/include/umps2/umps/libumps.e"
 
 void scheduler(){
@@ -37,7 +38,7 @@ void scheduler(){
 			/* else processCount > 0 and softblock count > 0 so we WAIT */
 			else{
 				/*  */
-				setTIMER(pseudoSec);
+				setTIMER(INTERVALTIME);
 				setSTATUS((getSTATUS() | IEc | IM));
 				WAIT();
 				

@@ -19,9 +19,9 @@
 #define ROMPAGESTART	0x20000000	 /* ROM Reserved Page */
 
 /*Clock values*/
-#define pseudoSec 100000000 /*time put into LDIT*/
-#define smallPseudoSec 100000 /*time put into LDIR for initial.c*/
-#define timeSlice 5000 	 /*time set for timers*/
+#define INTERVALTIME 100000000 /*time put into PsuedoClock (interval)*/
+#define CPUADDTIME 100000 /*time for scheduler (CPU specific)*/
+#define TIMESLICE 5000 	 /*time set for timers*/
 
 /* SYSCALL values*/
 #define CREATEPROCESS 1
@@ -136,6 +136,37 @@
 #define VMo 0x04000000		/* the “previous” setting of the Status.VMp bit*/
 
 #define TE  0x08000000		/* the processor Local Timer enable bit. A 1-bit mask that enables disables the processor’s Local Timer.*/
+
+/*hex values for line addresses for cause bits*/
+#define LINEADDR_0 0x00000100
+#define LINEADDR_1 0x00000200
+#define LINEADDR_2 0x00000400
+#define LINEADDR_3 0x00000800
+#define LINEADDR_4 0x00001000
+#define LINEADDR_5 0x00002000
+#define LINEADDR_6 0x00004000
+#define LINEADDR_7 0x00008000
+
+/*hex values for device addresses on the above line addrs*/
+#define DEVICEADDR_0 0x1
+#define DEVICEADDR_1 0x2
+#define DEVICEADDR_2 0x4
+#define DEVICEADDR_3 0x8
+#define DEVICEADDR_4 0x10
+#define DEVICEADDR_5 0x20
+#define DEVICEADDR_6 0x40
+#define DEVICEADDR_7 0x80
+
+/*hex values for word based on the lineNumber*/
+#define WORD_0 0x1000003C
+#define WORD_1 0x10000040
+#define WORD_2 0x10000044
+#define WORD_3 0x10000048
+#define WORD_4 0x1000004C
+
+/*Value to acknowledge the interrupt*/
+#define ACK 1
+
 
 /*-------------------------------------------------------------------*/
 #endif

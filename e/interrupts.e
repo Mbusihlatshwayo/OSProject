@@ -10,6 +10,11 @@
 
 #include "../h/types.h"
 
+void handleClockLines(int lineNo);
+int handleTerminalLine(int semaDevice);
+int findDevLine(memaddr causeAddr);
+int findDev(int lineNo);
+
 extern int interruptHandler();
 
 /***************************************************************/

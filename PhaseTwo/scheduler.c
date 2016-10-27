@@ -53,6 +53,7 @@ void scheduler(){
 	loadState(&(currentProcess->p_s));
 }
 
+/*Load the previous state the was before a context switch*/
 void loadState(state_t *state){
 	LDST(state);
 	

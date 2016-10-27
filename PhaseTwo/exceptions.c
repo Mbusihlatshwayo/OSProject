@@ -54,6 +54,8 @@ int tlbHandler(){
 		
 	}
 	
+	return 0;
+	
 }
 
 /*****************Pgm Trap Exception Handling******************/
@@ -87,6 +89,7 @@ int programTrapHandler(){
 		
 	}
 	
+	return 0;
 	
 }
 
@@ -97,12 +100,18 @@ int programTrapHandler(){
  * Executes some instruction based on the value of 1-8 found in a[0] */
 int syscallHandler(){
 	
+	/*local vars*/
+	int kernelMode; /*Hold boolean value of if in kernel/user mode*/
+	
+	
 	/*context switch!*/	
 	moveState(oldSys, &(currentProcess->p_s));
+	
+	/*move on from interrupt (so groundhog day won't happen)*/
 	currentProcess->p_s.s_pc = (currentProcess->p_s.s_pc)+4;
 	
 	/*set kernelMode*/
-	int kernelMode = (oldSys->s_status & KUp);
+	kernelMode = (oldSys->s_status & KUp);
 	
 	/*If syscall is 9 or greater, kill it or pass up*/
 	if (oldSys->s_a0 >= 9) {
@@ -129,7 +138,7 @@ int syscallHandler(){
 		
 	} 
 	/* check if we are in kernel mode and the syscall is from 1-8 */
-	if (oldSys->s_a0 < 9 && kernelMode != 0) {
+	if (oldSys->s_a0 < 9 && kernelMode != 0) { /*Question: If it freaks out here, try "==" instead of !="*/
 		switch (oldSys->s_a0){
 			case CREATEPROCESS: 		
 				createProcess((state_t *) oldSys->s_a1);  
@@ -186,6 +195,8 @@ int syscallHandler(){
 		programTrapHandler();
 		
 	}
+	
+	return 0;
 	
 }
 
@@ -266,7 +277,7 @@ void terminateProcess()
 		
 	}
 	
-	freePCB(currentProcess); /*put it on the free PCB list beacuse it is now been officially killed*/
+	freePcb(currentProcess); /*put it on the free PCB list beacuse it is now been officially killed*/
 	processCount = processCount - 1; /*One less process to worry about. */
 	
 	
@@ -276,9 +287,10 @@ void terminateProcess()
 /*Syscall 3 (or "V Operation) causes the sema4 from the address given to be signaled and incremented*/
 void verhogen(int *semaddr) {
 	
+	pcb_t *p;
+	
 	*(semaddr) = *(semaddr)+1; /* Increment the int pointed ay by currentProcess->p_s.s_a1 */
 	
-	pcb_t *p;
 	p = removeBlocked(semaddr);
 
 	/*If p exists based on the address given, put it on the readyQueue*/
@@ -373,7 +385,7 @@ void getCPUTime(){
 /*Syscall 7 performs a P operation on the pseudo-clock timer sema4. This sema4 is V'd every 100 milliseconds automatically by the nucleus*/
 void waitForClock(){
 	
-	passeren(clockTimer);
+	passeren(&clockTimer);
 	
 	softBlockCount = softBlockCount+1;
 
@@ -406,9 +418,7 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	
 	if(deviceList[intlNo][dnum] < 0)
 	{
-		
-		moveState(&(deviceList[intlNo][dnum]), &(currentProcess->p_s)); /*Question: Pointers and such might be wrong here...*/
-				
+			
 		insertBlocked(&(deviceList[intlNo][dnum]), currentProcess);
 		
 		/*Store time and change the time it took to process*/

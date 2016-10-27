@@ -116,29 +116,30 @@ HIDDEN int findDev(int lineNo){
 		return 7;
 	}
 	else{
-		return NULL;
+		return 0;
 	}
 	
 	
 }
 
 /*Line 7 is a terminal line and because the status is split different than the rest of the lines, it has to be treated differently.*/
-HIDDEN int handleTerminalLine(int semaDevice)
+/*Question: Does this param make sense?*/
+HIDDEN int handleTerminalLine(int *semaddr)
 {
 	/*local vars */
 	unsigned int status;
 	
-	status = &(devregarea->devreg[(semaDevice)]).t_transm_status; /*Question: Does this need to be a pointer? Video 13*/
+	status = devregarea->devreg[*(semaddr)].t_transm_status; /*Question: Does this need to be a pointer? Video 13*/
 	
 	/*if terminal transit is on, acknowledge. else, ack recieve*/
 	if((status &  0x0F) != READY)
 	{
-		devregarea->devreg[(semaDevice)].t_transm_command = ACK; /*Question: Will this work?*/
+		devregarea->devreg[*(semaddr)].t_transm_command = ACK; /*Question: Will this work?*/
 	}
 	else
 	{
-		status = &(devregarea->devreg[(semaDevice)]).t_recv_status;
-		devregarea->devreg[(semaDevice)].t_recv_command = ACK;
+		status = devregarea->devreg[(*semaddr)].t_recv_status;
+		devregarea->devreg[*(semaddr)].t_recv_command = ACK;
 		
 		
 		termReceive = 1;
@@ -237,7 +238,7 @@ int interruptHandler(){
 		/*Step 4: Get/set the status for process v0 & acknowledge the interrupt*/
 		if(line == TERMINT)
 		{
-			intStatus = handleTerminalLine(deviceSemaIndex);
+			intStatus = handleTerminalLine(&deviceSemaIndex); /*Question: Does this param make sense?*/
 		}
 		else
 		{
@@ -263,12 +264,12 @@ int interruptHandler(){
 		/*Step 5: V the sema4*/
 		deviceList[lineIndex][device] = deviceList[lineIndex][device] + 1;
 		
-		/*Note: The sema4 should always be either 0 or -1 (video 13)*/ 
-		if(deviceSema <= 0)
-		{
+		/*Note: The sema4 should always be either 0 or -1 (video 13)
+		if(&(deviceSema) <= 0) Question: Comparing pointer to 0?
+		{*/ 
 			p = removeBlocked(&(deviceList[lineIndex][device]));
 			
-		}
+		/*}*/
 		
 		/*If p is equal to NULL, set the status of the sema4 is the sema4 status list (special case is if it it a transmit status terminal line)*/
 		if(p == NULL)
@@ -312,7 +313,7 @@ int interruptHandler(){
 	
 	
 	
-	
+	return 0;
 	
 				
 	

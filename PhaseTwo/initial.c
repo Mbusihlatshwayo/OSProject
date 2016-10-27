@@ -30,51 +30,53 @@ cpu_t startTOD;											/*The TOD clock start*/
 /*******************Helper Functions********************/
 /*copy before context switch to after*/
 void moveState(state_t *previous, state_t *current ) {
+	int i = 0;
 	
 	current->s_asid = previous->s_asid;
 	current->s_cause = previous->s_cause;
 	current->s_status = previous->s_status;
 	current->s_pc = previous->s_pc;
 	
-	/*Question: Do we need a while loop here?*/
-	for (int i = 0; i <= STATEREGNUM; i++) {
+	while (i <= STATEREGNUM) {
 		current->s_reg[i] = previous->s_reg[i];
+		 i = i+1;
 	}
 	
 }
 
 /*******************Main Function***********************/
 int main()
-{
-
-	 initPcbs();
-	 initASL();
+{	 
+	/*local vars*/ 
+	 devregarea_t *deviceArea; /*device area (used for RAMTOP calc*/
+	 unsigned int RAMTOP;	  
+	 state_t *newState;			/*The state based on the area of mem*/
+	 pcb_t *p;					/*The process that starts everything off*/
+	 
+	 /*For while loop sema4 init*/
+	 int i;						
+	 int j;
+	 
+	 /* initialize device area*/
+	 deviceArea = (devregarea_t*) ADDRESS1;
+	 
+	 /*init RAMPTOP*/
+	 RAMTOP = (deviceArea->rambase) + (deviceArea->ramsize);
 	 
 	 processCount = 0;
 	 softBlockCount =0;
 	 currentProcess = NULL;
-	 readyQueue = mkEmptyProcQ();
-	 
-	 
-	 /* declare and initialize device area*/
-	 devregarea_t *deviceArea;
-	 deviceArea = (devregarea_t*) ADDRESS1;
-	
-	 /*init RAMPTOP*/
-	 unsigned int RAMTOP;
-	 RAMTOP = (deviceArea->rambase) + (deviceArea->ramsize);
-	 
 	  
 	 /*populate 4 new areas in low memory (Syscall/break new, program trap new, TLB mang. new, interrupt new)
 	 * set the stack pointer(last page of physcial mem). This is the same for all 4
 	 *  set the status (all 4 is the same): VM off, interrupts masked, supervisor mode ON
 	 * set the PC to address of correct function. This is different for all 4.
 	 */
-	  state_t *newState;
 	  
 	  /* declare and initialize SYSCALL new area*/
 	  newState = (state_t *) NEWSYSCALL;
-	  /*Question: Do we need to call STST(newState) here?*/
+	  STST(newState);
+	  
 	  newState->s_pc = (memaddr) syscallHandler();
 	  newState->s_t9 = (memaddr) syscallHandler();
 	  newState->s_sp = RAMTOP;
@@ -82,7 +84,8 @@ int main()
 	  
 	  /* declare and initialize Program Trap new area */
 	  newState = (state_t *) NEWTRAP;
-	  /*Question: Do we need a moveState here?*/
+	  moveState(newState, (state_t *) NEWTRAP);
+	  
 	  newState->s_pc = (memaddr) programTrapHandler();
 	  newState->s_t9 = (memaddr) programTrapHandler();
 	  newState->s_sp = RAMTOP;
@@ -90,7 +93,8 @@ int main()
 	  
 	  /* declare and initialize Memory Management new area */
 	  newState = (state_t *) NEWTLB;
-	  /*Question: Do we need a moveState here?*/
+	   moveState(newState, (state_t *) NEWTLB);
+	   
 	  newState->s_pc = (memaddr) tlbHandler();
 	  newState->s_t9 = (memaddr) tlbHandler();
 	  newState->s_sp = RAMTOP;
@@ -98,7 +102,8 @@ int main()
 	  
 	  /* declare and initialize Interrupt new area */
 	  newState = (state_t *) NEWINTERRUPT;
-	  /*Question: Do we need a moveState here?*/
+	  moveState(newState, (state_t *) NEWINTERRUPT);
+	   
 	  newState->s_pc = (memaddr) interruptHandler();
 	  newState->s_t9 = (memaddr) interruptHandler();
 	  newState->s_sp = RAMTOP;
@@ -106,12 +111,16 @@ int main()
 	
 	/*Init all nucleaus maintained sema4s to 0. There is one sema4 for each external device plus one for clocktimer*/
 	  
-	  for(int i=0; i<DEVICELISTNUM; i++)
+	  i = 0;
+	  j = 0;
+	  while(i<DEVICELISTNUM)
 	  {
-		  for(int j=0; j<DEVICENUM; j++)
+		  while(j<DEVICENUM)
 		  {
 			  deviceList[i][j] = 0;
+			  j = j +1;
 		  }
+		  i = i+1;
 	  }
 	  
 	  /*Init clock stuff*/
@@ -119,16 +128,21 @@ int main()
 	  setTIMER(TIMESLICE);	
 	  LDIT(CPUADDTIME);
 	  
+	  /*init phase 1 stuff*/
+	  initPcbs();
+	  initASL();
+	  readyQueue = mkEmptyProcQ();
+	  
 	  
 	  /*Init first process for Ready Queue. 
 	   * 	Status: Interrupts on, VM off, Local Timer on, kernel-mode on
 	   * 	SP: RAMTOP-FRAMESIZE
 	   * 	PC: test() (from p2test)
 	   */ 
-	  pcb_t *p = allocPcb();
+	  p = allocPcb();
 	  
 	  processCount++;
-	  (p->p_s).s_pc = (memaddr) test(); /*Question: Do we need to move p2test from Mikey's dir?*/
+	  (p->p_s).s_pc = (memaddr) test(); /*Question: Is this how we call p2test? Or should it be just "test"*/
 	  (p->p_s).s_t9 = (memaddr) test();
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
 	  (p->p_s).s_status = ALLOFF | TE | IEc | KUc; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
@@ -137,4 +151,6 @@ int main()
 
 	  insertProcQ(&readyQueue, p);
 	  scheduler();
+	  
+	  return 0;
 }

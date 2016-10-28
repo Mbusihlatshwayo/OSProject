@@ -75,7 +75,7 @@ HIDDEN int findDev(int lineNo){
 		
 	/*Get the interrupt addr*/
 	if(lineNo == 3){
-		intrAddr = WORD_0; /*Question: compilation error*/
+		intrAddr = WORD_0;
 	}
 	else if(lineNo == 4){
 		intrAddr = WORD_1;
@@ -123,18 +123,18 @@ HIDDEN int findDev(int lineNo){
 }
 
 /*Line 7 is a terminal line and because the status is split different than the rest of the lines, it has to be treated differently.*/
-/*Question: Does this param make sense?*/
+
 HIDDEN int handleTerminalLine(int *semaddr)
 {
 	/*local vars */
 	unsigned int status;
 	
-	status = devregarea->devreg[*(semaddr)].t_transm_status; /*Question: Does this need to be a pointer? Video 13*/
+	status = devregarea->devreg[*(semaddr)].t_transm_status;
 	
 	/*if terminal transit is on, acknowledge. else, ack recieve*/
 	if((status &  0x0F) != READY)
 	{
-		devregarea->devreg[*(semaddr)].t_transm_command = ACK; /*Question: Will this work?*/
+		devregarea->devreg[*(semaddr)].t_transm_command = ACK;
 	}
 	else
 	{
@@ -238,7 +238,7 @@ int interruptHandler(){
 		/*Step 4: Get/set the status for process v0 & acknowledge the interrupt*/
 		if(line == TERMINT)
 		{
-			intStatus = handleTerminalLine(&deviceSemaIndex); /*Question: Does this param make sense?*/
+			intStatus = handleTerminalLine(&deviceSemaIndex);
 		}
 		else
 		{
@@ -264,12 +264,12 @@ int interruptHandler(){
 		/*Step 5: V the sema4*/
 		deviceList[lineIndex][device] = deviceList[lineIndex][device] + 1;
 		
-		/*Note: The sema4 should always be either 0 or -1 (video 13)
-		if(&(deviceSema) <= 0) Question: Comparing pointer to 0?
-		{*/ 
+		/*Note: The sema4 should always be either 0 or -1 (video 13)*/
+		if(&(deviceSema[deviceSemaIndex]) <= 0) /*Question: Does this comparison make sense?*/
+		{
 			p = removeBlocked(&(deviceList[lineIndex][device]));
 			
-		/*}*/
+		}
 		
 		/*If p is equal to NULL, set the status of the sema4 is the sema4 status list (special case is if it it a transmit status terminal line)*/
 		if(p == NULL)

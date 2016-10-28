@@ -40,7 +40,7 @@ HIDDEN devregarea_t *devregarea = (devregarea_t *) ADDRESS1; /* declare and init
  * 		6 - printer device
  * 		7 - terminal device
 */
-HIDDEN int findDevLine(memaddr causeAddr){
+int findDevLine(memaddr causeAddr){
 	
 	if((causeAddr & LINEADDR_1) !=0){
 		return 1;
@@ -69,7 +69,7 @@ HIDDEN int findDevLine(memaddr causeAddr){
 }
 
 /*find the device on a specific line that the interrupt is on by getting the word based on the line number and then'AND'ing it w/ the device addreses*/
-HIDDEN int findDev(int lineNo){
+int findDev(int lineNo){
 	
 	memaddr intrAddr;
 		
@@ -124,7 +124,7 @@ HIDDEN int findDev(int lineNo){
 
 /*Line 7 is a terminal line and because the status is split different than the rest of the lines, it has to be treated differently.*/
 
-HIDDEN int handleTerminalLine(int *semaddr)
+int handleTerminalLine(int *semaddr)
 {
 	/*local vars */
 	unsigned int status;
@@ -134,7 +134,7 @@ HIDDEN int handleTerminalLine(int *semaddr)
 	/*if terminal transit is on, acknowledge. else, ack recieve*/
 	if((status &  0x0F) != READY)
 	{
-		devregarea->devreg[*(semaddr)].t_transm_command = ACK;
+		devregarea->devreg[*(semaddr)].t_transm_command = ACK; 
 	}
 	else
 	{
@@ -150,7 +150,7 @@ HIDDEN int handleTerminalLine(int *semaddr)
 }
 
 /*Loads timers based on the type of clock it is (determined by line)*/
-HIDDEN void handleClockLines(int lineNo)
+void handleClockLines(int lineNo)
 {
 	/*Highest priority Local Timer goes right on through to the readyQueue*/
 	if(lineNo == 1)

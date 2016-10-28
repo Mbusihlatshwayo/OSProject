@@ -11,9 +11,20 @@
 #include "../h/types.h"
 #include "../e/pcb.e"
 #include "../e/asl.e"
+#include "../e/exceptions.e"
+#include "../e/interrupts.e"
 #include "../e/initial.e"
 #include "../e/scheduler.e"
 #include "/usr/local/include/umps2/umps/libumps.e"
+
+
+/*******************Helper Functions********************/
+
+/*Load the previous state the was before a context switch*/
+void loadState(state_t *state){
+	LDST(state);
+	
+}
 
 void scheduler(){
 	
@@ -51,10 +62,4 @@ void scheduler(){
 	
 	/* context switch*/
 	loadState(&(currentProcess->p_s));
-}
-
-/*Load the previous state the was before a context switch*/
-void loadState(state_t *state){
-	LDST(state);
-	
 }

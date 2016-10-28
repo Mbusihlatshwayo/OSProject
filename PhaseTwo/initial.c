@@ -18,7 +18,6 @@
 #include "/usr/local/include/umps2/umps/libumps.e"
 
 extern void test();
-
 /****************Module global variables****************/
 int processCount; 										/*The count of the number of processes in the system*/
 int softBlockCount;										/*The number of processes in the system currently blocked and waiting for an interrupt*/
@@ -79,8 +78,8 @@ int main()
 	  newState = (state_t *) NEWSYSCALL;
 	  STST(newState);
 	  
-	  newState->s_pc = (memaddr) syscallHandler();
-	  newState->s_t9 = (memaddr) syscallHandler();
+	  newState->s_pc = (memaddr) syscallHandler;
+	  newState->s_t9 = (memaddr) syscallHandler;
 	  newState->s_sp = RAMTOP;
 	  newState->s_status = ALLOFF;
 	  
@@ -88,8 +87,8 @@ int main()
 	  newState = (state_t *) NEWTRAP;
 	  moveState(newState, (state_t *) NEWTRAP);
 	  
-	  newState->s_pc = (memaddr) programTrapHandler();
-	  newState->s_t9 = (memaddr) programTrapHandler();
+	  newState->s_pc = (memaddr) programTrapHandler;
+	  newState->s_t9 = (memaddr) programTrapHandler;
 	  newState->s_sp = RAMTOP;
 	  newState->s_status = ALLOFF;
 	  
@@ -97,8 +96,8 @@ int main()
 	  newState = (state_t *) NEWTLB;
 	   moveState(newState, (state_t *) NEWTLB);
 	   
-	  newState->s_pc = (memaddr) tlbHandler();
-	  newState->s_t9 = (memaddr) tlbHandler();
+	  newState->s_pc = (memaddr) tlbHandler;
+	  newState->s_t9 = (memaddr) tlbHandler;
 	  newState->s_sp = RAMTOP;
 	  newState->s_status = ALLOFF;
 	  
@@ -106,8 +105,8 @@ int main()
 	  newState = (state_t *) NEWINTERRUPT;
 	  moveState(newState, (state_t *) NEWINTERRUPT);
 	   
-	  newState->s_pc = (memaddr) interruptHandler();
-	  newState->s_t9 = (memaddr) interruptHandler();
+	  newState->s_pc = (memaddr) interruptHandler;
+	  newState->s_t9 = (memaddr) interruptHandler;
 	  newState->s_sp = RAMTOP;
 	  newState->s_status = ALLOFF;
 	

@@ -30,6 +30,12 @@ HIDDEN devregarea_t *devregarea = (devregarea_t *) ADDRESS1; /* declare and init
 
 /*******************Helper Functions********************/
 
+debugInt(int a, int b, int c, int d)
+ {
+	 int i = 0;
+	 i = i +1;
+ }
+
 /*find the line that the interrupt is on by taking the old cause addr and 'AND'ing it w/ the line addreses (defined by cause bytes 8-15)
  * Lines:
  * 		0 - multi core
@@ -192,6 +198,8 @@ void handleClockLines(int lineNo)
 /*Interrupts are handled by lowest number = highest priority*/
 int interruptHandler(){
 	
+	debugInt(1000,0,0,0);
+	
 	/*Local Vars*/
 
 	device_t *deviceSema; 	/*The device sema4*/
@@ -204,9 +212,10 @@ int interruptHandler(){
 	int deviceSemaIndex; 	/*Used to find the deviceSema using algebra*/
 	unsigned int intStatus; /*Holds the status of the interrupt*/
 	
-	
 	/*Step 0: Store time and previous state*/
 	cause = oldINT->s_cause;
+	
+	debugInt(oldINT->s_cause,0,0,0);
 		
 	if(currentProcess != NULL)
 	{
@@ -220,6 +229,8 @@ int interruptHandler(){
 	/*Step 1: Determine the line #*/
 	line = findDevLine(cause);
 	
+	debugInt(line,0,0,0);
+	
 	/*Check if line number is equal to one of the timers (lines 1 and 2). Else the line is 3-7*/
 	if(line == 1 || line == 2)
 	{
@@ -231,9 +242,16 @@ int interruptHandler(){
 		/*Step 2: Determine the instance # */
 		device = findDev(line);
 		
+		debugInt(line,device,0,0);
+		
 		/*Step 3: Calculate the sema4 for this device*/
 		deviceSemaIndex = (((line - 3) * 8) + device);
+		
+		debugInt(line,device,deviceSemaIndex,0);
+		
 		deviceSema = &(devregarea->devreg[deviceSemaIndex]);
+		
+		debugInt(line,device,deviceSemaIndex, deviceSema);
 		
 		/*Step 4: Get/set the status for process v0 & acknowledge the interrupt*/
 		if(line == TERMINT)

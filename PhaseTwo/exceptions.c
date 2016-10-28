@@ -120,14 +120,13 @@ int syscallHandler(){
 	int kernelMode; /*Hold boolean value of if in kernel/user mode*/
 
 
-	
 	moveState(oldSys, &(currentProcess->p_s));	/*context switch!*/	
 	
 	currentProcess->p_s.s_pc = (currentProcess->p_s.s_pc)+4; 	/*move on from interrupt (so groundhog day won't happen)*/
 	
 	kernelMode = (oldSys->s_status & KUp);		/*set kernelMode*/
-
 	
+	debugEx(oldSys->s_a0, 0, 0 , 0);
 
 	/*If syscall is 9 or greater, kill it or pass up*/
 	if (oldSys->s_a0 >= 9) {
@@ -526,18 +525,16 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 	if(deviceList[intlNo][dnum] < 0)
 
-	{		
+	{	
 		insertBlocked(&(deviceList[intlNo][dnum]), currentProcess);
 
 		/*Store time and change the time it took to process*/
 		STCK(endTOD);
 		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
-		
 
 		currentProcess = NULL;
 
 		softBlockCount = softBlockCount - 1;
-
 
 		scheduler();	/*Blocking call*/
 

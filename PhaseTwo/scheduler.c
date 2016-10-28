@@ -34,12 +34,8 @@ debugSc(int a, int b, int c, int d)
 
 void scheduler(){
 	
-	debugSc(currentProcess, processCount, softBlockCount, emptyProcQ(readyQueue));
-	
 	/*If we don't have a current process, get one going!*/
 	if(currentProcess == NULL){
-		
-		debugSc(currentProcess, processCount, softBlockCount, emptyProcQ(readyQueue));
 		
 		/*If we want a new currentProcess, but the readyQ doesn't have anything, handle it one of three ways:*/
 		if(emptyProcQ(readyQueue)){
@@ -58,14 +54,16 @@ void scheduler(){
 			}
 			/* else processCount > 0 and softblock count > 0 so we WAIT */
 			else{
-				/*  */
+				debugSc(202, 0,0,0);
 				setTIMER(INTERVALTIME);
+				debugSc(203, getSTATUS(),0,0);
 				setSTATUS((getSTATUS() | IEc | IM));
+				debugSc(204, 0,0,0); /*Question: Doesn't get here..*/
 				WAIT();
 				
 			}
 		}
-	
+		
 		/* if readyQueue is not empty, take a process*/
 		currentProcess = removeProcQ(&readyQueue);
 

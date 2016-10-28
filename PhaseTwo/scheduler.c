@@ -26,10 +26,20 @@ void loadState(state_t *state){
 	
 }
 
+debugSc(int a, int b, int c, int d)
+ {
+	 int i = 0;
+	 i = i +1;
+ }
+
 void scheduler(){
+	
+	debugSc(currentProcess, processCount, softBlockCount, emptyProcQ(readyQueue));
 	
 	/*If we don't have a current process, get one going!*/
 	if(currentProcess == NULL){
+		
+		debugSc(currentProcess, processCount, softBlockCount, emptyProcQ(readyQueue));
 		
 		/*If we want a new currentProcess, but the readyQ doesn't have anything, handle it one of three ways:*/
 		if(emptyProcQ(readyQueue)){
@@ -55,11 +65,11 @@ void scheduler(){
 				
 			}
 		}
+	
+		/* if readyQueue is not empty, take a process*/
+		currentProcess = removeProcQ(&readyQueue);
+
+		/* context switch*/
+		loadState(&(currentProcess->p_s));
 	}
-	
-	/* if readyQueue is not empty, take a process*/
-	currentProcess = removeProcQ(&readyQueue);
-	
-	/* context switch*/
-	loadState(&(currentProcess->p_s));
 }

@@ -143,7 +143,7 @@ int main()
 	  p = allocPcb();
 	  
 	  processCount++;
-	  (p->p_s).s_pc = (memaddr) test; /*Question: Is this how we call p2test? Or should it be just "test"*/
+	  (p->p_s).s_pc = (memaddr) test;
 	  (p->p_s).s_t9 = (memaddr) test;
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
 	  (p->p_s).s_status = ALLOFF | TE | IEc | KUc; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/

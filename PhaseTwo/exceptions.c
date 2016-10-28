@@ -28,6 +28,12 @@ state_t *oldProgram = (state_t *) OLDTRAP;
 state_t *oldTLB = (state_t *) OLDTLB;
 
 
+ debugEx(int a, int b, int c, int d)
+ {
+	 int i = 0;
+	 i = i +1;
+ }
+
 /*****************TLB Exception Handling*****************/
 
 /* Occurs: When MPS2 fails to translate a virtual address into its corresponding physical address.
@@ -150,7 +156,7 @@ int syscallHandler(){
 	} 
 
 	/* check if we are in kernel mode and the syscall is from 1-8 */
-	if (oldSys->s_a0 < 9 && kernelMode == 0) { /*Question: If it freaks out here, try "==" instead of !="*/
+	if (oldSys->s_a0 < 9 && kernelMode == 0) { 
 
 		switch (oldSys->s_a0){
 
@@ -169,7 +175,6 @@ int syscallHandler(){
 			break;
 
 			case VERHOGEN:
-
 				verhogen((int *) oldSys->s_a1);
 
 			break;	
@@ -199,7 +204,6 @@ int syscallHandler(){
 			break;
 
 			case WAITIO:
-
 				waitForIO((int) oldSys->s_a1, (int) oldSys->s_a2, (int) oldSys->s_a3);		
 
 			break;
@@ -371,23 +375,28 @@ void verhogen(int *semaddr) {
 void passeren(int *semaddr) {
 
 	*(semaddr) = *(semaddr)-1; /* Decrement the int pointed ay by currentProcess->p_s.s_a1 */
+	
+	/*debugEx();*/
 
 	/*If the semaddr is less than 0, block the currentProcess & prep for context switch*/
 	if (*(semaddr) < 0) {
-
+		
 		/*Store time and change the time it took to process*/
 		STCK(endTOD);
 		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
-			
 
 		/*Block process*/
-		moveState(oldSys, &(currentProcess->p_s));	
-		currentProcess->p_semAdd = semaddr;	
+		moveState(oldSys, &(currentProcess->p_s));
+
 		insertBlocked(semaddr, currentProcess);
+		currentProcess->p_semAdd = semaddr;	
+		
+		currentProcess = NULL;
+
 		scheduler();	
 
 	}
-
+	
 	oldSys->s_pc = oldSys->s_pc + 4;
 	loadState(oldSys);
 	
@@ -493,7 +502,12 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 		{
 			intlNo = intlNo - 2;
 
-			currentProcess->p_s.s_v0 = deviceStatusList[intlNo - 2][dnum]; /*set the status word for a terminal*/
+			currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word for a terminal*/
+		}
+		else
+		{
+			intlNo = intlNo - 3;
+			currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word*/	
 		}
 
 	}
@@ -502,7 +516,7 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	{
 		intlNo = intlNo - 3;
 
-		currentProcess->p_s.s_v0 = deviceStatusList[intlNo - 3][dnum]; /*set the status word*/	
+		currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word*/	
 	}
 
 	
@@ -524,12 +538,12 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 		softBlockCount = softBlockCount - 1;
 
+
 		scheduler();	/*Blocking call*/
 
 	}
-
 	
-
+	
 	oldSys->s_pc = oldSys->s_pc + 4;
 	loadState(oldSys);
 

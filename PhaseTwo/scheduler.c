@@ -34,6 +34,8 @@ debugSc(int a, int b, int c, int d)
 
 void scheduler(){
 	
+	debugSc(processCount, emptyProcQ(readyQueue), softBlockCount, 55);
+	
 	/*If we don't have a current process, get one going!*/
 	if(currentProcess == NULL){
 		

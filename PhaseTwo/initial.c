@@ -63,10 +63,6 @@ int main()
 	 
 	 /*init RAMPTOP*/
 	 RAMTOP = (deviceArea->rambase) + (deviceArea->ramsize);
-	 
-	 processCount = 0;
-	 softBlockCount =0;
-	 currentProcess = NULL;
 	  
 	 /*populate 4 new areas in low memory (Syscall/break new, program trap new, TLB mang. new, interrupt new)
 	 * set the stack pointer(last page of physcial mem). This is the same for all 4
@@ -110,8 +106,18 @@ int main()
 	  newState->s_sp = RAMTOP;
 	  newState->s_status = ALLOFF;
 	
-	/*Init all nucleaus maintained sema4s to 0. There is one sema4 for each external device plus one for clocktimer*/
+	
+	  /*init phase 1 stuff*/
+	  initPcbs();
+	  initASL();
+	  readyQueue = mkEmptyProcQ();
 	  
+	  /*Init clock stuff*/
+	  clockTimer = 0; 		
+	  setTIMER(TIMESLICE);	
+	  LDIT(CPUADDTIME);
+	  
+	/*Init all nucleaus maintained sema4s to 0. There is one sema4 for each external device plus one for clocktimer*/
 	  i = 0;
 	  j = 0;
 	  while(i<DEVICELISTNUM)
@@ -124,17 +130,7 @@ int main()
 		  i = i+1;
 	  }
 	  
-	  /*Init clock stuff*/
-	  clockTimer = 0; 		
-	  setTIMER(TIMESLICE);	
-	  LDIT(CPUADDTIME);
-	  
-	  /*init phase 1 stuff*/
-	  initPcbs();
-	  initASL();
-	  readyQueue = mkEmptyProcQ();
-	  
-	  
+
 	  /*Init first process for Ready Queue. 
 	   * 	Status: Interrupts on, VM off, Local Timer on, kernel-mode on
 	   * 	SP: RAMTOP-FRAMESIZE
@@ -146,10 +142,12 @@ int main()
 	  (p->p_s).s_pc = (memaddr) test;
 	  (p->p_s).s_t9 = (memaddr) test;
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
-	  (p->p_s).s_status = ALLOFF | TE | IEc | KUc; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
+	  (p->p_s).s_status = ALLOFF | 0x0800ff01; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
 	  
+	  processCount = 0;
+	  softBlockCount =0;
+	  currentProcess = NULL;
 	  
-
 	  insertProcQ(&readyQueue, p);
 	  scheduler();
 	  

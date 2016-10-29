@@ -155,7 +155,7 @@ int syscallHandler(){
 	} 
 
 	/* check if we are in kernel mode and the syscall is from 1-8 */
-	if (oldSys->s_a0 < 9 && kernelMode == 0) { 
+	if (oldSys->s_a0 < 9 && oldSys->s_a0 > 0&& kernelMode == 0) { 
 
 		switch (oldSys->s_a0){
 
@@ -213,11 +213,11 @@ int syscallHandler(){
 
 	/* if the syscall was 1-8 but we are also in user mode*/ 
 	else {
+		
+		/* set the cause register to be a privileged instruction*/
+		oldSys->s_cause = (oldSys->s_cause | 10 << 2);
 
 		moveState(oldSys, oldProgram);
-
-		/* set the cause register to be a privileged instruction*/
-		oldProgram->s_cause = 10 << 2;
 
 		programTrapHandler();
 
@@ -357,7 +357,8 @@ void verhogen(int *semaddr) {
 
 	/*If p exists based on the address given, put it on the readyQueue*/
 	if (p != NULL) {
-
+		
+		p->p_semAdd = NULL;
 		insertProcQ(&readyQueue, p);
 
 	}
@@ -386,6 +387,11 @@ void passeren(int *semaddr) {
 
 		/*Block process*/
 		moveState(oldSys, &(currentProcess->p_s));
+		
+		if(&clockTimer == *semaddr) /*Question: THis might not work */
+		{
+			softBlockCount = softBlockCount + 1;
+		}
 
 		insertBlocked(semaddr, currentProcess);
 		currentProcess->p_semAdd = semaddr;	
@@ -481,8 +487,6 @@ void waitForClock(){
 
 	passeren(&clockTimer);
 
-	softBlockCount = softBlockCount+1;
-
 	loadState(&(currentProcess->p_s));
 
 }
@@ -534,7 +538,7 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 		currentProcess = NULL;
 
-		softBlockCount = softBlockCount - 1;
+		softBlockCount = softBlockCount + 1;
 
 		scheduler();	/*Blocking call*/
 

@@ -142,7 +142,6 @@ int main()
 	   */ 
 	  p = allocPcb();
 	  
-	  processCount = processCount+1;
 	  (p->p_s).s_pc = (memaddr) test;
 	  (p->p_s).s_t9 = (memaddr) test;
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
@@ -151,6 +150,8 @@ int main()
 	  currentProcess = NULL;
 	  
 	  insertProcQ(&readyQueue, p);
+	  processCount = processCount+1;
+	  
 	  scheduler();
 	  
 	  return 0;

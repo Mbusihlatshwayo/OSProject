@@ -107,10 +107,14 @@ int main()
 	  newState->s_status = ALLOFF;
 	
 	
-	  /*init phase 1 stuff*/
+	  /*Init Phase 1 stuff*/
 	  initPcbs();
 	  initASL();
 	  readyQueue = mkEmptyProcQ();
+	  
+	  /*Init Phase 2 stuff*/
+	  processCount = 0;
+	  softBlockCount =0;
 	  
 	  /*Init clock stuff*/
 	  clockTimer = 0; 		
@@ -138,14 +142,12 @@ int main()
 	   */ 
 	  p = allocPcb();
 	  
-	  processCount++;
+	  processCount = processCount+1;
 	  (p->p_s).s_pc = (memaddr) test;
 	  (p->p_s).s_t9 = (memaddr) test;
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
 	  (p->p_s).s_status = ALLOFF | 0x0800ff01; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
 	  
-	  processCount = 0;
-	  softBlockCount =0;
 	  currentProcess = NULL;
 	  
 	  insertProcQ(&readyQueue, p);

@@ -275,19 +275,21 @@ int interruptHandler(){
 			{
 				lineIndex = lineIndex - 2;
 			}
-			
+			else
+			{
+				lineIndex = lineIndex - 3;
+			}
+		}
+		else
+		{
 			lineIndex = lineIndex - 3;
 		}
 		
 		/*Step 5: V the sema4*/
 		deviceList[lineIndex][device] = deviceList[lineIndex][device] + 1;
 		
-		/*Note: The sema4 should always be either 0 or -1 (video 13)*/
-		if(&(deviceSema[deviceSemaIndex]) <= 0) /*Question: Does this comparison make sense?*/
-		{
-			p = removeBlocked(&(deviceList[lineIndex][device]));
-			
-		}
+		p = removeBlocked(&(deviceList[lineIndex][device]));
+
 		
 		/*If p is equal to NULL, set the status of the sema4 is the sema4 status list (special case is if it it a transmit status terminal line)*/
 		if(p == NULL)
@@ -298,42 +300,48 @@ int interruptHandler(){
 				{
 					deviceStatusList[line - 2][device] = intStatus;
 				}
+				else
+				{
+					deviceStatusList[line - 3][device] = intStatus;
+				}
 			}
 			
-			deviceStatusList[line - 3][device] = intStatus;
+			else
+			{
+			
+				deviceStatusList[line - 3][device] = intStatus;
+			}
 			
 		}
 		else
 		{
+			
+			insertProcQ(&readyQueue, p); 	/*insert process into readyQueue (job is no longer blocked)*/
+			
 			softBlockCount = softBlockCount - 1;
 			
 			(p->p_s).s_v0 = intStatus;	/*Store devices status into the pcb's v0*/
-			
-			insertProcQ(&readyQueue, p); 	/*insert process into readyQueue (job is no longer blocked)*/
+		
+		}
+	}
 
-		}
 		
-		termReceive = 0; /*reset for next interrupt (else everything would think it is a terminal..Which would be bad*/
+	termReceive = 0; /*reset for next interrupt (else everything would think it is a terminal..Which would be bad*/
 		
-		/*Step 7: Return control to process that was excecuting at the time of the interrupt & fix time (if in wait state, call scheduler)*/
-		if(currentProcess != NULL)
-		{
-			STCK(startTOD);
-			
-			loadState(oldINT);
-		}
-		else
-		{
-			scheduler();
-		}
+	/*Step 7: Return control to process that was excecuting at the time of the interrupt & fix time (if in wait state, call scheduler)*/
+	if(currentProcess != NULL)
+	{
+		STCK(startTOD);
 		
+		loadState(oldINT);
+	}
+	else
+	{
+		scheduler();
 	}
 	
 	
-	
 	return 0;
-	
-				
 	
 	
 	

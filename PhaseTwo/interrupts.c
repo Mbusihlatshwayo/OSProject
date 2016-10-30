@@ -161,6 +161,7 @@ void handleClockLines(int lineNo)
 	/*Highest priority Local Timer goes right on through to the readyQueue*/
 	if(lineNo == 1)
 	{
+		/*debugInt(lineNo, softBlockCount, 111,111);*/
 		moveState(oldINT, &(currentProcess->p_s));
 		
 		insertProcQ(&readyQueue, currentProcess);
@@ -174,11 +175,14 @@ void handleClockLines(int lineNo)
 	else
 	{
 		pcb_t *p;
+		debugInt(lineNo, softBlockCount, p ,clockTimer);
 		
 		p = removeBlocked(&(clockTimer));
+		debugInt(lineNo, softBlockCount, p ,222);
 		
 		while(p != NULL)
 		{
+			debugInt(lineNo, softBlockCount, 333, 333);
 			insertProcQ(&readyQueue, p);
 			
 			clockTimer = clockTimer + 1;
@@ -198,8 +202,6 @@ void handleClockLines(int lineNo)
 /*Interrupts are handled by lowest number = highest priority*/
 int interruptHandler(){
 	
-	debugInt(1000,0,0,0);
-	
 	/*Local Vars*/
 
 	device_t *deviceSema; 	/*The device sema4*/
@@ -214,8 +216,6 @@ int interruptHandler(){
 	
 	/*Step 0: Store time and previous state*/
 	cause = oldINT->s_cause;
-	
-	debugInt(oldINT->s_cause,0,0,0);
 		
 	if(currentProcess != NULL)
 	{
@@ -229,12 +229,11 @@ int interruptHandler(){
 	/*Step 1: Determine the line #*/
 	line = findDevLine(cause);
 	
-	debugInt(line,0,0,0);
-	
 	/*Check if line number is equal to one of the timers (lines 1 and 2). Else the line is 3-7*/
 	if(line == 1 || line == 2)
 	{
 		handleClockLines(line);
+		/*debugInt(line,device,222,0);*/
 	}
 	
 	else
@@ -242,16 +241,12 @@ int interruptHandler(){
 		/*Step 2: Determine the instance # */
 		device = findDev(line);
 		
-		debugInt(line,device,0,0);
+		/*debugInt(line,device,0,0);*/
 		
 		/*Step 3: Calculate the sema4 for this device*/
 		deviceSemaIndex = (((line - 3) * 8) + device);
 		
-		debugInt(line,device,deviceSemaIndex,0);
-		
 		deviceSema = &(devregarea->devreg[deviceSemaIndex]);
-		
-		debugInt(line,device,deviceSemaIndex, deviceSema);
 		
 		/*Step 4: Get/set the status for process v0 & acknowledge the interrupt*/
 		if(line == TERMINT)

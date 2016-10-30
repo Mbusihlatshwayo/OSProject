@@ -34,8 +34,7 @@ debugSc(int a, int b, int c, int d)
 
 void scheduler(){
 	
-	debugSc(processCount, emptyProcQ(readyQueue), softBlockCount, 55);
-	
+
 	/*If we don't have a current process, get one going!*/
 	if(currentProcess == NULL){
 		
@@ -51,16 +50,15 @@ void scheduler(){
 			/* Oh no - Deadlock is defined when the process count > 0 and the soft block count is zero*/ 
 			else if (processCount > 0 && softBlockCount == 0) {
 				
+				debugSc(processCount, emptyProcQ(readyQueue), softBlockCount, 55);
+	
 				PANIC();
 				
 			}
 			/* else processCount > 0 and softblock count > 0 so we WAIT */
 			else{
-				debugSc(202, 0,0,0);
 				setTIMER(INTERVALTIME);
-				debugSc(203, getSTATUS(),0,0);
 				setSTATUS((getSTATUS() | IEc | IM));
-				debugSc(204, 0,0,0); /*Question: Doesn't get here..*/
 				WAIT();
 				
 			}

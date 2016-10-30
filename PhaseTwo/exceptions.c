@@ -126,7 +126,7 @@ int syscallHandler(){
 	
 	kernelMode = (oldSys->s_status & KUp);		/*set kernelMode*/
 	
-	debugEx(oldSys->s_a0, 0, 0 , 0);
+	/*debugEx(oldSys->s_a0, 0, 0 , 0);*/
 
 	/*If syscall is 9 or greater, kill it or pass up*/
 	if (oldSys->s_a0 >= 9) {
@@ -244,15 +244,16 @@ void createProcess(state_t *statep) {
 	if (newProcess == NULL) {
 
 		/* set the v0 register to -1 we had an error*/
-		currentProcess->p_s.s_v0 = -1;	
+		currentProcess->p_s.s_v0 = -1;
+		
 	}
 
 	else{
 		
+		processCount = processCount+1;
+				
 		/* we were successful in creating a new proc so move to the new state */
 		moveState(statep, &(newProcess->p_s));
-
-		processCount = processCount+1;
 
 		insertChild(currentProcess, newProcess);
 
@@ -264,7 +265,7 @@ void createProcess(state_t *statep) {
 
 	}
 
-	/* calls load state with the current process state */ 
+	/* calls load state with the current process state*/
 	loadState(&(currentProcess->p_s));
 
 }
@@ -277,6 +278,7 @@ void createProcess(state_t *statep) {
 void terminateProcess()
 
 {
+	/*debugEx(10000,00,0,0);*/
 
 	/*call SYS2 recursively in order to get rid all children*/
 	while(!emptyChild(currentProcess)){
@@ -375,8 +377,6 @@ void verhogen(int *semaddr) {
 void passeren(int *semaddr) {
 
 	*(semaddr) = *(semaddr)-1; /* Decrement the int pointed ay by currentProcess->p_s.s_a1 */
-	
-	/*debugEx();*/
 
 	/*If the semaddr is less than 0, block the currentProcess & prep for context switch*/
 	if (*(semaddr) < 0) {
@@ -384,15 +384,8 @@ void passeren(int *semaddr) {
 		/*Store time and change the time it took to process*/
 		STCK(endTOD);
 		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
-
-		/*Block process*/
-		moveState(oldSys, &(currentProcess->p_s));
 		
-		if(&clockTimer == *semaddr) /*Question: THis might not work */
-		{
-			softBlockCount = softBlockCount + 1;
-		}
-
+		/*Block process*/
 		insertBlocked(semaddr, currentProcess);
 		currentProcess->p_semAdd = semaddr;	
 		
@@ -484,10 +477,33 @@ void getCPUTime(){
 
 /*Syscall 7 performs a P operation on the pseudo-clock timer sema4. This sema4 is V'd every 100 milliseconds automatically by the nucleus*/
 void waitForClock(){
+	
+	debugEx(clockTimer, 45454, 45,5);
 
-	passeren(&clockTimer);
+	clockTimer = clockTimer-1; /* Decrement the int pointed ay by currentProcess->p_s.s_a1 */
 
-	loadState(&(currentProcess->p_s));
+	/*If the semaddr is less than 0, block the currentProcess & prep for context switch*/
+	if (clockTimer < 0) {
+		
+		/*Store time and change the time it took to process*/
+		STCK(endTOD);
+		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
+
+		/*Block process*/
+		moveState(oldSys, &(currentProcess->p_s));
+		
+		softBlockCount = softBlockCount + 1;
+
+		insertBlocked(&(clockTimer), currentProcess);
+		
+		currentProcess = NULL;
+
+		scheduler();	
+
+	}
+	
+	oldSys->s_pc = oldSys->s_pc + 4;
+	loadState(oldSys);
 
 }
 
@@ -526,6 +542,8 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
+	
+	debugEx(deviceList[intlNo][dnum], 1212, 2, 2);
 
 	if(deviceList[intlNo][dnum] < 0)
 

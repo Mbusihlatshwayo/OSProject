@@ -33,6 +33,12 @@ state_t *oldTLB = (state_t *) OLDTLB;
 	 int i = 0;
 	 i = i +1;
  }
+ 
+ debugEx2(int a, int b, int c, int d)
+ {
+	 int i = 0;
+	 i = i +2;
+ }
 
 /*****************TLB Exception Handling*****************/
 
@@ -49,7 +55,7 @@ int tlbHandler(){
 	/*If the current process does not have a value for newTLB, kill it*/	
 	if(currentProcess->p_newTLB == NULL) { 	
 
-		terminateProcess(); 
+		terminateProcess(currentProcess); 
 
 		currentProcess = NULL;
 
@@ -86,7 +92,7 @@ int programTrapHandler(){
 	/*If the current process does not have a value for newPGM, kill it*/
 	if(currentProcess->p_newPGM == NULL) { 
 
-		terminateProcess(); 
+		terminateProcess(currentProcess); 
 
 		currentProcess = NULL;
 
@@ -134,7 +140,7 @@ int syscallHandler(){
 		/*If the current process does not have a value for newTLB, kill it*/	
 		if(currentProcess->p_newSYS == NULL) { 
 
-			terminateProcess(); 
+			terminateProcess(currentProcess); 
 
 			currentProcess = NULL;	
 
@@ -167,7 +173,7 @@ int syscallHandler(){
 
 			case TERMINATEPROCESS:
 
-				terminateProcess();
+				terminateProcess(currentProcess);
 
 				scheduler();	
 
@@ -275,48 +281,36 @@ void createProcess(state_t *statep) {
 /*Syscall 2 causes the executing process to cease to exist (POOF). In addition, recursively, all progeny of this
  * process are terminated as well.*/
 
-void terminateProcess()
+void terminateProcess(pcb_t *p)
 
 {
-	/*debugEx(10000,00,0,0);*/
+	debugEx2(10000,00,0,0);
 
 	/*call SYS2 recursively in order to get rid all children*/
-	while(!emptyChild(currentProcess)){
+	while(!emptyChild(p)){
 
-		
-
-		currentProcess = removeChild(currentProcess);
-
-		terminateProcess();
+		terminateProcess(removeChild(p));
 
 	}
 
 	
 
 	/*check if current process has been annihilated*/
-	if (!currentProcess) {
-
-		
+	if (p == currentProcess) {
 
 		outChild(currentProcess);
 
-		
-
 		currentProcess = NULL;
-
-
 
 	}
 
-	
-
 	/*Check if the currentProcess is blocked*/
-	else if (currentProcess->p_semAdd != NULL)
+	else if (p->p_semAdd != NULL)
 	{
-		outBlocked(currentProcess);
+		outBlocked(p);
 
-		/*if the semaAdd is not the clock, subtract a softBlk*/
-		if((currentProcess->p_semAdd) > &(deviceList[0][0])){
+		/*if the semaAdd is not the clock or the last sema4, subtract a softBlk*/
+		if((p->p_semAdd > &(deviceList[0][0])) && (p->p_semAdd < &(deviceList[DEVICELISTNUM][DEVICENUM]))){
 
 			softBlockCount = softBlockCount -1;
 
@@ -325,7 +319,7 @@ void terminateProcess()
 		/*The semAdd is the clock*/
 		else{
 
-			*(currentProcess->p_semAdd) = *(currentProcess->p_semAdd + 1);
+			*(p->p_semAdd) = *(p->p_semAdd + 1);
 
 		}
 
@@ -334,11 +328,11 @@ void terminateProcess()
 	/*else the currentProcess is on the readyQueue so call outProcQ*/
 	else{
 
-		outProcQ(&(readyQueue), currentProcess);	
+		outProcQ(&(readyQueue), p);	
 
 	}
 
-	freePcb(currentProcess); /*put it on the free PCB list beacuse it is now been officially killed*/
+	freePcb(p); /*put it on the free PCB list beacuse it is now been officially killed*/
 
 	processCount = processCount - 1; /*One less process to worry about. */
 
@@ -411,7 +405,7 @@ void specTrapVec(int type, state_t *oldP, state_t *newP) {
 
 	if(currentProcess->p_newTLB != NULL || currentProcess->p_newPGM != NULL || currentProcess->p_newSYS) {
 
-		terminateProcess();
+		terminateProcess(currentProcess);
 
 		scheduler();
 
@@ -466,7 +460,7 @@ void specTrapVec(int type, state_t *oldP, state_t *newP) {
  
 void getCPUTime(){
 	
-	debugEx(clockTimer, 5555, 45,5);
+	/*debugEx(clockTimer, 45454, 45,5);*/
 
 	/* place the processor time in microseconds in the v0 reg */
 	currentProcess->p_s.s_v0 = currentProcess->p_CPUTime;
@@ -480,7 +474,7 @@ void getCPUTime(){
 /*Syscall 7 performs a P operation on the pseudo-clock timer sema4. This sema4 is V'd every 100 milliseconds automatically by the nucleus*/
 void waitForClock(){
 	
-	debugEx(clockTimer, 45454, 45,5);
+	/*debugEx(clockTimer, 45454, 45,5);*/
 
 	clockTimer = clockTimer-1; /* Decrement the int pointed ay by currentProcess->p_s.s_a1 */
 
@@ -545,7 +539,7 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
 	
-	debugEx(deviceList[intlNo][dnum], 1212, 2, 2);
+	debugEx(deviceList[intlNo][dnum], 1212, 2, 2); /*QUESTION: This impacts the "p2 is Okay" statement?!!*/
 
 	if(deviceList[intlNo][dnum] < 0)
 

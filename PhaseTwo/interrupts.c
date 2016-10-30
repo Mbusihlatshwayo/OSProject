@@ -174,7 +174,10 @@ void handleClockLines(int lineNo)
 	/*Perform V operation on Interval Timer*/
 	else
 	{
+		
 		pcb_t *p;
+		
+		LDIT(CPUADDTIME); /*Load Interval Timer*/		
 		debugInt(lineNo, softBlockCount, p ,clockTimer);
 		
 		p = removeBlocked(&(clockTimer));
@@ -193,7 +196,6 @@ void handleClockLines(int lineNo)
 			
 		}
 	
-		LDIT(CPUADDTIME); /*Load Interval Timer*/		
 	}
 }
 
@@ -223,7 +225,7 @@ int interruptHandler(){
 
 		STCK(endTOD);
 
-		currentProcess->p_CPUTime = currentProcess->p_CPUTime + (endTOD - startTOD);
+		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD - startTOD);
 	}
 	
 	/*Step 1: Determine the line #*/

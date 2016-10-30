@@ -381,13 +381,13 @@ void passeren(int *semaddr) {
 	/*If the semaddr is less than 0, block the currentProcess & prep for context switch*/
 	if (*(semaddr) < 0) {
 		
-		/*Store time and change the time it took to process*/
-		STCK(endTOD);
-		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
-		
 		/*Block process*/
 		insertBlocked(semaddr, currentProcess);
 		currentProcess->p_semAdd = semaddr;	
+		
+		/*Store time and change the time it took to process*/
+		STCK(endTOD);
+		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
 		
 		currentProcess = NULL;
 
@@ -465,6 +465,8 @@ void specTrapVec(int type, state_t *oldP, state_t *newP) {
  * This means that the nucleaus must record in the PCB the amount of processor time used by each process*/
  
 void getCPUTime(){
+	
+	debugEx(clockTimer, 5555, 45,5);
 
 	/* place the processor time in microseconds in the v0 reg */
 	currentProcess->p_s.s_v0 = currentProcess->p_CPUTime;

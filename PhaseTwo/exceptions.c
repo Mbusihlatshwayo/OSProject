@@ -52,6 +52,7 @@ state_t *oldTLB = (state_t *) OLDTLB;
  
 int tlbHandler(){
 
+	debugEx(5454, 5, 4, 5);
 	/*If the current process does not have a value for newTLB, kill it*/	
 	if(currentProcess->p_types[0].newState == NULL) { 	
 
@@ -88,13 +89,9 @@ int tlbHandler(){
  * 		the current processor state.*/
 
 int programTrapHandler(){
-	
-	debugEx(currentProcess->p_types[1].newState, 5656, 5, 5);
 
 	/*If the current process does not have a value for newPGM, kill it*/
 	if(currentProcess->p_types[1].newState == NULL) {
-		
-		debugEx2(2222, 2, 2, 2);
 
 		terminateProcess(currentProcess); 
 
@@ -170,7 +167,7 @@ int syscallHandler(){
 	} 
 
 	/* check if we are in kernel mode and the syscall is from 1-8 */
-	if (oldSys->s_a0 < 9 && oldSys->s_a0 > 0&& kernelMode == 0) { 
+	if (oldSys->s_a0 < 9 && oldSys->s_a0 > 0 && kernelMode == 0) { 
 
 		switch (oldSys->s_a0){
 
@@ -228,6 +225,8 @@ int syscallHandler(){
 
 	/* if the syscall was 1-8 but we are also in user mode*/ 
 	else {
+		
+		debugEx(121212, 12, 2, 2);
 		
 		/* set the cause register to be a privileged instruction*/
 		oldSys->s_cause = (oldSys->s_cause | 10 << 2);
@@ -369,8 +368,7 @@ void verhogen(int *semaddr) {
 	}
 
 	oldSys->s_pc = oldSys->s_pc + 4;
-
-	loadState(&(currentProcess->p_s));				/*Non-blocking call*/
+	loadState(oldSys);				/*Non-blocking call*/
 
 }
 
@@ -411,13 +409,10 @@ void passeren(int *semaddr) {
  * This syscall can only be called at most once for each of the three excpetion types(TLB, PGM, and Syscall). 
  * Any request that that calls this more than that shall be executed (Sys2 style).*/
 void specTrapVec(int type, state_t *oldP, state_t *newP) {
-	
-	debugEx2(type, 11, 5, 5);
 
 	/*Sys 5 has already been called before - kill it*/
 	if(currentProcess->p_types[type].newState != NULL)
 	{
-		debugEx2(type, 777, 5, 5);
 		terminateProcess(currentProcess);
 		
 		scheduler();
@@ -513,8 +508,6 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
-	
-	debugEx(deviceList[intlNo][dnum], 1212, 2, 2); /*QUESTION: This impacts the "p2 is Okay" statement?!!*/
 
 	if(deviceList[intlNo][dnum] < 0)
 

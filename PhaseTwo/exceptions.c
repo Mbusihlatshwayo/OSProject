@@ -53,7 +53,7 @@ state_t *oldTLB = (state_t *) OLDTLB;
 int tlbHandler(){
 
 	/*If the current process does not have a value for newTLB, kill it*/	
-	if(currentProcess->p_newTLB == NULL) { 	
+	if(currentProcess->p_types[0].newState == NULL) { 	
 
 		terminateProcess(currentProcess); 
 
@@ -64,11 +64,11 @@ int tlbHandler(){
 	/*else "pass it up"*/	
 	} else {
 
-		moveState(oldTLB, currentProcess->p_oldTLB);
+		moveState(oldProgram, currentProcess->p_types[0].oldState);
 
-		moveState(currentProcess->p_newTLB, &(currentProcess->p_s)); 	
+		moveState(currentProcess->p_types[0].newState, &(currentProcess->p_s)); 
 
-		loadState(&currentProcess->p_s);
+		loadState(&(currentProcess->p_s));
 	}
 
 	return 0;
@@ -88,9 +88,13 @@ int tlbHandler(){
  * 		the current processor state.*/
 
 int programTrapHandler(){
+	
+	debugEx(currentProcess->p_types[1].newState, 5656, 5, 5);
 
 	/*If the current process does not have a value for newPGM, kill it*/
-	/*if(currentProcess->p_newPGM == NULL) { */
+	if(currentProcess->p_types[1].newState == NULL) {
+		
+		debugEx2(2222, 2, 2, 2);
 
 		terminateProcess(currentProcess); 
 
@@ -99,15 +103,15 @@ int programTrapHandler(){
 		scheduler();
 
 	/* else, "pass it up"*/
-	/*} else { 
+	} else { 
 
-		moveState(oldProgram, currentProcess->p_oldPGM);
+		moveState(oldProgram, currentProcess->p_types[1].oldState);
 
-		moveState(currentProcess->p_newPGM, &(currentProcess->p_s)); 
+		moveState(currentProcess->p_types[1].newState, &(currentProcess->p_s)); 
 
-		loadState(&currentProcess->p_s);
+		loadState(&(currentProcess->p_s));
 
-	} */
+	}
 
 	return 0;
 
@@ -132,13 +136,18 @@ int syscallHandler(){
 	
 	kernelMode = (oldSys->s_status & KUp);		/*set kernelMode*/
 	
-	/*debugEx(oldSys->s_a0, 0, 0 , 0);*/
+	/*if(oldSys->s_a0 != 8 && oldSys->s_a0 !=3 && oldSys->s_a0 !=4)
+	{
+		debugEx2(oldSys->s_a0, 0, 0 , 0);
+	}*/
 
 	/*If syscall is 9 or greater, kill it or pass up*/
 	if (oldSys->s_a0 >= 9) {
+		
+		debugEx2(oldSys->s_a0, 3333, 3 , 333);
 
 		/*If the current process does not have a value for newTLB, kill it*/	
-		if(currentProcess->p_newSYS == NULL) { 
+		if(currentProcess->p_types[2].newState == NULL) { 
 
 			terminateProcess(currentProcess); 
 
@@ -150,11 +159,11 @@ int syscallHandler(){
 
 		} else {
 
-			moveState(oldSys, currentProcess->p_oldSYS);
+			moveState(oldProgram, currentProcess->p_types[2].oldState);
 
-			moveState(currentProcess->p_newSYS, &(currentProcess->p_s)); 	
+			moveState(currentProcess->p_types[2].newState, &(currentProcess->p_s)); 
 
-			loadState(&currentProcess->p_s);
+			loadState(&(currentProcess->p_s));
 
 		}	
 
@@ -284,7 +293,7 @@ void createProcess(state_t *statep) {
 void terminateProcess(pcb_t *p)
 
 {
-	debugEx2(10000,00,0,0);
+	/*debugEx2(10000,00,0,0);*/
 
 	/*call SYS2 recursively in order to get rid all children*/
 	while(!emptyChild(p)){
@@ -298,7 +307,7 @@ void terminateProcess(pcb_t *p)
 	/*check if current process has been annihilated*/
 	if (p == currentProcess) {
 
-		outChild(currentProcess);
+		outChild(p);
 
 		currentProcess = NULL;
 
@@ -361,7 +370,7 @@ void verhogen(int *semaddr) {
 
 	oldSys->s_pc = oldSys->s_pc + 4;
 
-	loadState(oldSys);				/*Non-blocking call*/
+	loadState(&(currentProcess->p_s));				/*Non-blocking call*/
 
 }
 
@@ -402,54 +411,28 @@ void passeren(int *semaddr) {
  * This syscall can only be called at most once for each of the three excpetion types(TLB, PGM, and Syscall). 
  * Any request that that calls this more than that shall be executed (Sys2 style).*/
 void specTrapVec(int type, state_t *oldP, state_t *newP) {
-
-	if(currentProcess->p_newTLB != NULL || currentProcess->p_newPGM != NULL || currentProcess->p_newSYS) {
-
-		terminateProcess(currentProcess);
-
-		scheduler();
-
-	}
-
 	
+	debugEx2(type, 11, 5, 5);
 
-	/*type indicates which of the 6 state ptrs should be changed*/
-	else {
+	/*Sys 5 has already been called before - kill it*/
+	if(currentProcess->p_types[type].newState != NULL)
+	{
+		debugEx2(type, 777, 5, 5);
+		terminateProcess(currentProcess);
 		
-		/*If a2 is a 0, it indicates a TLB type*/
-		if(type == 0)
-
-		{				
-			currentProcess->p_oldTLB = oldP;
-
-			currentProcess->p_newTLB = newP;
-
-		}
-
-		/*If a2 is a 1, it indicates a PGM type*/
-		else if(type == 1)
-
-		{
-
-			currentProcess->p_oldPGM = oldP;
-
-			currentProcess->p_newPGM = newP;
-
-		}
-
-		/*If a2 is 2, it indicates a Syscall type*/
-		else
-		{
-			
-			currentProcess->p_oldSYS = oldP;
-
-			currentProcess->p_newSYS = newP;
-
-		}
-
+		scheduler();
+		
+	}
+	/*Else set the old and new states*/
+	else
+	{
+		currentProcess->p_types[type].oldState = oldP;
+		
+		currentProcess->p_types[type].newState = newP;
+		
 		loadState(&(currentProcess->p_s));
-
-	}		
+		
+	}
 
 }
 

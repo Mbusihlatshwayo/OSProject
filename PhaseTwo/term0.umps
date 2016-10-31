@@ -11,5 +11,6 @@ p5 starts
 p6 starts
 p7 starts
 second incarnation of p4 starts
+Access non-existent memory
 p4 is OK
-kernel panic()
+memory

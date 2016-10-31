@@ -508,6 +508,8 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
+	
+	debugEx(deviceList[intlNo][dnum], 1212, 2, 2); /*QUESTION: This impacts the "p2 is Okay" statement?!!*/ 
 
 	if(deviceList[intlNo][dnum] < 0)
 

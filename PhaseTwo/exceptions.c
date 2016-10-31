@@ -90,7 +90,7 @@ int tlbHandler(){
 int programTrapHandler(){
 
 	/*If the current process does not have a value for newPGM, kill it*/
-	if(currentProcess->p_newPGM == NULL) { 
+	/*if(currentProcess->p_newPGM == NULL) { */
 
 		terminateProcess(currentProcess); 
 
@@ -99,7 +99,7 @@ int programTrapHandler(){
 		scheduler();
 
 	/* else, "pass it up"*/
-	} else {
+	/*} else { 
 
 		moveState(oldProgram, currentProcess->p_oldPGM);
 
@@ -107,7 +107,7 @@ int programTrapHandler(){
 
 		loadState(&currentProcess->p_s);
 
-	}
+	} */
 
 	return 0;
 
@@ -472,39 +472,31 @@ void getCPUTime(){
 
 
 /*Syscall 7 performs a P operation on the pseudo-clock timer sema4. This sema4 is V'd every 100 milliseconds automatically by the nucleus*/
-void waitForClock(){
-	
-	/*debugEx(clockTimer, 45454, 45,5);*/
-
-	clockTimer = clockTimer-1; /* Decrement the int pointed ay by currentProcess->p_s.s_a1 */
+void waitForClock()
+{
+	/* Decrement the int pointed ay by currentProcess->p_s.s_a1 */
+	clockTimer = clockTimer - 1;
 
 	/*If the semaddr is less than 0, block the currentProcess & prep for context switch*/
-	if (clockTimer < 0) {
-		
+	if(clockTimer < 0){
+
+		insertBlocked (&(clockTimer) , currentProcess);
 		/*Store time and change the time it took to process*/
 		STCK(endTOD);
-		currentProcess->p_CPUTime = (currentProcess->p_CPUTime) + (endTOD-startTOD);
 
-		/*Block process*/
-		moveState(oldSys, &(currentProcess->p_s));
-		
+		currentProcess->p_CPUTime = currentProcess->p_CPUTime + (endTOD - startTOD);
+
 		softBlockCount = softBlockCount + 1;
 
-		insertBlocked(&(clockTimer), currentProcess);
-		
 		currentProcess = NULL;
 
-		scheduler();	
+		scheduler();
 
 	}
+
+	loadState(&(currentProcess->p_s));
 	
-	oldSys->s_pc = oldSys->s_pc + 4;
-	loadState(oldSys);
-
 }
-
-
-
 /*Syscall 8 performs a P operation on the I/O device sema4 indicated by the values in a1, a2, and optionally a3*/
 
 void waitForIO(int intlNo, int dnum, int waitForTermRead){

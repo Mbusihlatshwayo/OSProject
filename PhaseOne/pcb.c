@@ -13,11 +13,6 @@
 #include "../h/types.h"
 #include "../e/pcb.e"
 
-void debugA(int a) {
-	int i;
-	i=0;
-}
-
 /****************Module global variables****************/
 
 HIDDEN pcb_t *pcbList_tp; /*list tail pointer*/
@@ -54,7 +49,6 @@ void insertProcQ (pcb_t **tp, pcb_t *p) {
 	}
 	/* if procq has at least one PCB */
 	else{
-		debugA(42);
 		
 		/*initialize pointers for the new node to be inserted */
 		p->p_next = (*tp)->p_next; /* the new nodes next value is set to the first element*/
@@ -71,13 +65,11 @@ void insertProcQ (pcb_t **tp, pcb_t *p) {
 
 pcb_t *removeProcQ(pcb_t **tp) { 
 	 
-	 debugA((int)*tp);
 	 /*pcb_t *headPCB; temp var for headNode*/
 	 
 	/* if the procQ is empty */
 	if(emptyProcQ(*tp)){
 		
-		debugA(1);
 		return(NULL);
 	
 	}
@@ -86,7 +78,6 @@ pcb_t *removeProcQ(pcb_t **tp) {
 		pcb_t *headPCB = *tp;
 		*tp = mkEmptyProcQ(); /*update tp to be removed*/
 		
-		debugA(2);
 		return(headPCB);
 		
 	}
@@ -98,7 +89,6 @@ pcb_t *removeProcQ(pcb_t **tp) {
 		(*tp)->p_next = (((*tp)->p_next)->p_next); /*set tp's next value as the new head of the list. Question: Can I use headPCB to see*/
 		
 		
-		debugA(3);
 		return(headPCB);
 
 	}
@@ -206,7 +196,6 @@ void initPcbs() {
 	i = 0;
 	pcbList_tp = mkEmptyProcQ();
 	while (i < MAXPROC) {
-		debugA(i);
 		freePcb(&procTable[i]);
 		i = i+1;
 	}
@@ -220,7 +209,6 @@ void initPcbs() {
 pcb_t *allocPcb(){
 	pcb_t *removedElement;
 	removedElement = removeProcQ(&pcbList_tp);
-	debugA((int)removedElement);
 	
 	if(removedElement != NULL){
 		removedElement->p_next = NULL;

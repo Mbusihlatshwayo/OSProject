@@ -23,10 +23,11 @@
 /****************Module global variables****************/
 cpu_t endTOD; 
 
-HIDDEN state_t *oldINT = (state_t *) OLDINTERRUPT; /*Old interrupt state area*/
+state_t *oldINT = (state_t *) OLDINTERRUPT; /*Old interrupt state area*/
+state_t *newINT = (state_t *) NEWINTERRUPT;
 
-HIDDEN int termReceive = 0; /* set boolean value for if a line is a terminal w/ status recieve*/
-HIDDEN devregarea_t *devregarea = (devregarea_t *) ADDRESS1; /* declare and initialize device area*/
+int termReceive = 0; /* set boolean value for if a line is a terminal w/ status recieve*/
+devregarea_t *devregarea = (devregarea_t *) ADDRESS1; /* declare and initialize device area*/
 
 /*******************Helper Functions********************/
 
@@ -77,6 +78,7 @@ int findDevLine(memaddr causeAddr){
 /*find the device on a specific line that the interrupt is on by getting the word based on the line number and then'AND'ing it w/ the device addreses*/
 int findDev(int lineNo){
 	
+	memaddr device = 0x00000001;
 	memaddr intrAddr;
 		
 	/*Get the interrupt addr*/
@@ -197,6 +199,7 @@ void handleClockLines(int lineNo)
 		}
 	
 	}
+	
 }
 
 /*******************Interrupt Handling***********************/
@@ -330,7 +333,7 @@ int interruptHandler(){
 	{
 		STCK(startTOD);
 		
-		loadState(oldINT);
+		loadState(&(currentProcess->p_s));
 	}
 	else
 	{

@@ -81,7 +81,7 @@ typedef struct pcb_t {
 	cpu_t            p_CPUTime;
 	
 	/*6 fields as ptrs to states (2 for each flag)*/
-	pcb_array p_types[3];
+	pcb_array p_types[TRAPTYPES];
 	
 } pcb_t;
 

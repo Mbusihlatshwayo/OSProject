@@ -53,6 +53,8 @@ state_t *oldTLB = (state_t *) OLDTLB;
 int tlbHandler(){
 
 	/*debugEx(5454, 5, 4, 5);*/
+	
+	currentProcess->p_s.s_pc = (currentProcess->p_s.s_pc)+4; 
 	/*If the current process does not have a value for newTLB, kill it*/	
 	if(currentProcess->p_types[0].newState == NULL) { 	
 
@@ -65,7 +67,7 @@ int tlbHandler(){
 	/*else "pass it up"*/	
 	} else {
 
-		moveState(oldProgram, currentProcess->p_types[0].oldState);
+		moveState(oldTLB, currentProcess->p_types[0].oldState);
 
 		moveState(currentProcess->p_types[0].newState, &(currentProcess->p_s)); 
 
@@ -90,7 +92,9 @@ int tlbHandler(){
 
 int programTrapHandler(){
 	
-	debugEx(5454, 5, 4, 5);
+	/*debugEx(5454, 5, 4, 5);*/
+	
+	currentProcess->p_s.s_pc = (currentProcess->p_s.s_pc)+4; 
 
 	/*If the current process does not have a value for newPGM, kill it*/
 	if(currentProcess->p_types[1].newState == NULL) {
@@ -135,10 +139,12 @@ int syscallHandler(){
 	
 	kernelMode = (oldSys->s_status & KUp) >> 0x3;		/*set kernelMode*/
 	
+	/*
 	if(kernelMode == 1)
 	{
 		debugEx2(kernelMode, oldSys->s_a0, 999, 9);
 	}
+	*/
 	/*
 	if(oldSys->s_a0 != 8 && oldSys->s_a0 !=3 && oldSys->s_a0 !=4)
 	{
@@ -150,10 +156,10 @@ int syscallHandler(){
 
 	/* if the syscall was 1-8 but we are also in user mode*/ 
 	if(kernelMode != 0){
-		debugEx2(kernelMode, oldSys->s_a0, 888, 8);
+		/*debugEx2(kernelMode, oldSys->s_a0, 888, 8);*/
 		
 		if ((oldSys->s_a0 > 0) && (oldSys->s_a0 <= 8)){
-			debugEx2(kernelMode, oldSys->s_a0, 777, 7);
+			/*debugEx2(kernelMode, oldSys->s_a0, 777, 7);*/
 			
 			/* set the cause register to be a privileged instruction*/
 			oldSys->s_cause = oldSys->s_cause | (10 << 2);
@@ -224,9 +230,9 @@ int syscallHandler(){
 
 	}
 	
-	/*If syscall is 9 or greater, kill it or pass up*/
+	/*If syscall is 9 or greater, kill it or pass up
 	
-	debugEx2(kernelMode, oldSys->s_a0, 767, 7);
+	debugEx2(kernelMode, oldSys->s_a0, 767, 7);*/
 
 	/*If the current process does not have a value for newTLB, kill it*/	
 	if(currentProcess->p_types[2].newState == NULL) { 
@@ -274,6 +280,9 @@ void createProcess(state_t *statep) {
 		/* set the v0 register to -1 we had an error*/
 		currentProcess->p_s.s_v0 = -1;
 		
+		/* calls load state with the current process state*/
+		loadState(&(currentProcess->p_s));
+		
 	}
 
 	else{
@@ -290,11 +299,11 @@ void createProcess(state_t *statep) {
 		
 		/* set the v0 register to 0 it was successful*/
 		currentProcess->p_s.s_v0 = 0;	
+		
+		/* calls load state with the current process state*/
+		loadState(&(currentProcess->p_s));
 
 	}
-
-	/* calls load state with the current process state*/
-	loadState(&(currentProcess->p_s));
 
 }
 
@@ -306,13 +315,13 @@ void createProcess(state_t *statep) {
 void terminateProcess(pcb_t *p)
 
 {
-	debugEx2(p,00,0,0);
+	/*debugEx2(p,00,0,0);*/
 	
 	/*call SYS2 recursively in order to get rid all children*/
 	while(!emptyChild(p)){
 
 		terminateProcess(removeChild(p));
-		debugEx2(p,11,1,1);
+		/*debugEx2(p,11,1,1);*/
 
 	}
 
@@ -323,7 +332,7 @@ void terminateProcess(pcb_t *p)
 
 		outChild(p);
 		
-		debugEx2(p,22,1,1);
+		/*debugEx2(p,22,1,1);*/
 
 		currentProcess = NULL;
 
@@ -332,7 +341,7 @@ void terminateProcess(pcb_t *p)
 	/*Check if the currentProcess is blocked*/
 	else if (p->p_semAdd != NULL)
 	{
-		debugEx2(p,33,1,1);
+		/*debugEx2(p,33,1,1);*/
 		outBlocked(p);
 
 		/*if the semaAdd is not the clock or the last sema4, subtract a softBlk*/
@@ -356,11 +365,11 @@ void terminateProcess(pcb_t *p)
 
 		outProcQ(&(readyQueue), p);	
 		
-		debugEx2(p,44,1,1);
+		/*debugEx2(p,44,1,1);*/
 
 	}
 
-	debugEx2(p,55,processCount,1);
+	/*debugEx2(p,55,processCount,1);*/
 	freePcb(p); /*put it on the free PCB list beacuse it is now been officially killed*/
 
 	processCount = processCount - 1; /*One less process to worry about. */
@@ -523,7 +532,7 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
 	
-	debugEx(deviceList[intlNo][dnum], 1212, 2, 2); /*QUESTION: This impacts the "p2 is Okay" statement?!!*/ 
+	/*debugEx(deviceList[intlNo][dnum], 1212, 2, 2); QUESTION: This impacts the "p2 is Okay" statement?!!*/ 
 
 	if(deviceList[intlNo][dnum] < 0)
 
@@ -543,9 +552,8 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	}
 	
 	currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word*/
-	debugEx(deviceStatusList[intlNo][dnum] << 0x3, 101010, 00, 11);
+	/*debugEx(deviceStatusList[intlNo][dnum] << 0x3, 101010, 00, 11);*/
 	
-	oldSys->s_pc = oldSys->s_pc + 4;
-	loadState(oldSys);
+	loadState(&(currentProcess->p_s));
 
 }

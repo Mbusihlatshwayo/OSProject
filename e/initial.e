@@ -20,6 +20,7 @@ extern int deviceList[DEVICELISTNUM][DEVICENUM];
 extern unsigned int deviceStatusList[DEVICELISTNUM][DEVICENUM];
 extern int clockTimer;
 extern cpu_t startTOD;
+extern cpu_t endTOD;
 
 extern void moveState(state_t *previous, state_t *current );
 

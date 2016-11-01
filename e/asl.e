@@ -19,7 +19,7 @@ extern void initASL ();
 semd_t *getActiveSem(int *semAdd);
 semd_t *getFreeSemd();
 semd_t *addSema(semd_t *sema, int *semAdd);
-semd_t *removeSema(semd_t *sema);
+semd_t *removeSema(int *semAdd);
 void addToFreeList(semd_t *semToAdd);
 
 /***************************************************************/

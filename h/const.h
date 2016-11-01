@@ -52,8 +52,8 @@
 #define OLDINTERRUPT 0x20000000
 
 /*semaphore number for devices*/
-#define DEVICELISTNUM 8
-#define DEVICENUM 6
+#define DEVICELISTNUM 6
+#define DEVICENUM 8
 
 
 /* utility constants */
@@ -163,9 +163,6 @@
 #define WORD_2 0x10000044
 #define WORD_3 0x10000048
 #define WORD_4 0x1000004C
-
-/*Value to acknowledge the interrupt*/
-#define ACK 1
 
 
 /*-------------------------------------------------------------------*/

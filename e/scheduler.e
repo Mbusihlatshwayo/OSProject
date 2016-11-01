@@ -1,5 +1,5 @@
-#ifndef INTERRUPTS
-#define INTERRUPTS
+#ifndef SCHEDULER
+#define SCHEDULER
 
 /************************** SCHEDULER.E ******************************
 *

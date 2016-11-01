@@ -11,7 +11,7 @@
 #include "../h/types.h"
 
 void handleClockLines(int lineNo);
-int handleTerminalLine(int semaDevice);
+int handleTerminalLine(int *semaddr);
 int findDevLine(memaddr causeAddr);
 int findDev(int lineNo);
 

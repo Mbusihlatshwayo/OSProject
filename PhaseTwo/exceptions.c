@@ -306,12 +306,13 @@ void createProcess(state_t *statep) {
 void terminateProcess(pcb_t *p)
 
 {
-	/*debugEx2(10000,00,0,0);*/
-
+	debugEx2(p,00,0,0);
+	
 	/*call SYS2 recursively in order to get rid all children*/
 	while(!emptyChild(p)){
 
 		terminateProcess(removeChild(p));
+		debugEx2(p,11,1,1);
 
 	}
 
@@ -321,6 +322,8 @@ void terminateProcess(pcb_t *p)
 	if (p == currentProcess) {
 
 		outChild(p);
+		
+		debugEx2(p,22,1,1);
 
 		currentProcess = NULL;
 
@@ -329,6 +332,7 @@ void terminateProcess(pcb_t *p)
 	/*Check if the currentProcess is blocked*/
 	else if (p->p_semAdd != NULL)
 	{
+		debugEx2(p,33,1,1);
 		outBlocked(p);
 
 		/*if the semaAdd is not the clock or the last sema4, subtract a softBlk*/
@@ -351,9 +355,12 @@ void terminateProcess(pcb_t *p)
 	else{
 
 		outProcQ(&(readyQueue), p);	
+		
+		debugEx2(p,44,1,1);
 
 	}
 
+	debugEx2(p,55,processCount,1);
 	freePcb(p); /*put it on the free PCB list beacuse it is now been officially killed*/
 
 	processCount = processCount - 1; /*One less process to worry about. */
@@ -381,8 +388,7 @@ void verhogen(int *semaddr) {
 
 	}
 
-	oldSys->s_pc = oldSys->s_pc + 4;
-	loadState(oldSys);				/*Non-blocking call*/
+	loadState(&(currentProcess->p_s));				/*Non-blocking call*/
 
 }
 
@@ -410,8 +416,7 @@ void passeren(int *semaddr) {
 
 	}
 	
-	oldSys->s_pc = oldSys->s_pc + 4;
-	loadState(oldSys);
+	loadState(&(currentProcess->p_s));
 	
 
 }

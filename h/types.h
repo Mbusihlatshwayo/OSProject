@@ -54,6 +54,14 @@ typedef struct state_t {
 
 } state_t, *state_PTR;
 
+/*Vector structure for each trap type*/
+typedef struct pcb_array {
+
+	state_t *oldState;
+	state_t *newState;
+
+} pcb_array;
+
 /* PCB structure */
 typedef struct pcb_t {
 	/* process queue fields*/
@@ -73,12 +81,7 @@ typedef struct pcb_t {
 	cpu_t            p_CPUTime;
 	
 	/*6 fields as ptrs to states (2 for each flag)*/
-	state_t 		*p_oldTLB;
-	state_t 		*p_newTLB;
-	state_t 		*p_oldPGM;
-	state_t 		*p_newPGM;
-	state_t 		*p_oldSYS;
-	state_t 		*p_newSYS;
+	pcb_array p_types[3];
 	
 } pcb_t;
 

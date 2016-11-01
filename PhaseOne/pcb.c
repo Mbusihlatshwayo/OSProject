@@ -136,18 +136,11 @@ pcb_t *outProcQ(pcb_t **tp, pcb_t *p){
 		if(*tp == p){
 			
 			removedNode = (*tp); /*set value of node going to be removed and returned.*/
-			
-			(*tp) = (removedNode->p_previous);
-			(*tp)->p_previous = (removedNode->p_previous); 
-			((*tp)->p_next)->p_previous = *tp;
+			(*tp)->p_previous->p_next = (*tp)->p_next;
+			(*tp)->p_next->p_previous = (*tp)->p_previous;
+			*tp = (*tp)->p_previous;
 			
 			return(removedNode);
-		}
-		
-		/*If p is the head pointer*/
-		else if (p == (*tp)->p_next){
-			return removeProcQ(tp);
-			
 		}
 		
 		/*Else p is the middle*/
@@ -237,6 +230,16 @@ pcb_t *allocPcb(){
 		removedElement->p_nxt_sib = NULL;
 		removedElement->p_prev_sib = NULL;
 		removedElement->p_semAdd = NULL;
+		
+		/*For Phase 2*/
+		removedElement->p_types[0].oldState = NULL;
+		removedElement->p_types[0].newState = NULL;
+		removedElement->p_types[1].oldState = NULL;
+		removedElement->p_types[1].newState = NULL;
+		removedElement->p_types[2].oldState = NULL;
+		removedElement->p_types[2].newState = NULL;
+		
+		removedElement->p_CPUTime = 0;
 	}
 	return(removedElement);
 }
@@ -320,50 +323,52 @@ pcb_t *outChild(pcb_t *p){
 	 }
 	 
 	 /*If p is the only child of parent*/
-	 else if (p->p_nxt_sib == NULL && p->p_prev_sib == NULL)
+	 else 
 	 {
-		 (p->p_prnt)->p_child = NULL; /*set parent's child to be NULL*/
-		  p->p_prnt = NULL; /*set child to have no parent*/
-		 
-	 }
-	 
-	 /*if p has siblings, so check where it is in the stack and update accordingly*/
-	 else
-	 {
-		 /*is p the first child? If so, need to set parent's child to next sibling & that sib's previous is set to NULL*/
-		 if(p->p_prev_sib == NULL) 
+		 if (p->p_nxt_sib == NULL && p->p_prev_sib == NULL)
 		 {
-			(p->p_prnt)->p_child = p->p_nxt_sib; /*set new first child for parent*/
-			(p->p_nxt_sib)->p_prev_sib = NULL; /*set new child's previous sibling as null*/
-			
-			p->p_prnt = NULL; /*set p to have no parent*/
-			p->p_nxt_sib = NULL; /*set p to have no next sibling. Previous sib is already NULL*/
-		
-		 }
-		 
-		 /*is p the last child? If so, previous sibling needs to have next sibling set to NULL*/
-		 else if (p->p_nxt_sib == NULL)
-		 {
-			(p->p_prev_sib)->p_nxt_sib = NULL;
-			 
-			p->p_prnt = NULL; /*set p to have no parent*/
-			p->p_prev_sib = NULL; /*set p to have no previous sibling. Next sib is already NULL*/
+			 (p->p_prnt)->p_child = NULL; /*set parent's child to be NULL*/
+			  p->p_prnt = NULL; /*set child to have no parent*/
 			 
 		 }
-		 
-		 /*else, just update siblings 'cause it's a middle child*/
+		 /*if p has siblings, so check where it is in the stack and update accordingly*/
 		 else
 		 {
-			 (p->p_nxt_sib)->p_prev_sib = (p->p_prev_sib); /*set p's next sibling to go to p's previous sibling*/
-			 (p->p_prev_sib)->p_nxt_sib = (p->p_nxt_sib); /*set p's previous sibling to go to p's next sibling*/
+			 /*is p the first child? If so, need to set parent's child to next sibling & that sib's previous is set to NULL*/
+			 if(p->p_prev_sib == NULL) 
+			 {
+				(p->p_prnt)->p_child = p->p_nxt_sib; /*set new first child for parent*/
+				(p->p_nxt_sib)->p_prev_sib = NULL; /*set new child's previous sibling as null*/
+				
+				p->p_prnt = NULL; /*set p to have no parent*/
+				p->p_nxt_sib = NULL; /*set p to have no next sibling. Previous sib is already NULL*/
+			
+			 }
 			 
-			 p->p_prnt = NULL;
-			 p->p_prev_sib = NULL;
-			 p->p_nxt_sib = NULL;
+			 /*is p the last child? If so, previous sibling needs to have next sibling set to NULL*/
+			 else if (p->p_nxt_sib == NULL)
+			 {
+				(p->p_prev_sib)->p_nxt_sib = NULL;
+				 
+				p->p_prnt = NULL; /*set p to have no parent*/
+				p->p_prev_sib = NULL; /*set p to have no previous sibling. Next sib is already NULL*/
+				 
+			 }
 			 
+			 /*else, just update siblings 'cause it's a middle child*/
+			 else
+			 {
+				 (p->p_nxt_sib)->p_prev_sib = (p->p_prev_sib); /*set p's next sibling to go to p's previous sibling*/
+				 (p->p_prev_sib)->p_nxt_sib = (p->p_nxt_sib); /*set p's previous sibling to go to p's next sibling*/
+				 
+				 p->p_prnt = NULL;
+				 p->p_prev_sib = NULL;
+				 p->p_nxt_sib = NULL;
+				 
+			 }
 		 }
+		 
+		 return p;
 	 }
-	 
-	return p;
  
 }

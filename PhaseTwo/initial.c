@@ -145,7 +145,7 @@ int main()
 	  (p->p_s).s_pc = (memaddr) test;
 	  (p->p_s).s_t9 = (memaddr) test;
 	  (p->p_s).s_sp = RAMTOP - PAGESIZE; 
-	  (p->p_s).s_status = ALLOFF | 0x0800ff01; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
+	  (p->p_s).s_status = ALLOFF | 0x0800ff04; /* Interrupts enabled, vm off, local timer enabled, kernal-mode on*/
 	  
 	  currentProcess = NULL;
 	  

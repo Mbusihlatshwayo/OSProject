@@ -52,7 +52,7 @@ state_t *oldTLB = (state_t *) OLDTLB;
  
 int tlbHandler(){
 
-	debugEx(5454, 5, 4, 5);
+	/*debugEx(5454, 5, 4, 5);*/
 	/*If the current process does not have a value for newTLB, kill it*/	
 	if(currentProcess->p_types[0].newState == NULL) { 	
 
@@ -89,6 +89,8 @@ int tlbHandler(){
  * 		the current processor state.*/
 
 int programTrapHandler(){
+	
+	debugEx(5454, 5, 4, 5);
 
 	/*If the current process does not have a value for newPGM, kill it*/
 	if(currentProcess->p_types[1].newState == NULL) {
@@ -131,17 +133,24 @@ int syscallHandler(){
 	
 	currentProcess->p_s.s_pc = (currentProcess->p_s.s_pc)+4; 	/*move on from interrupt (so groundhog day won't happen)*/
 	
-	kernelMode = (oldSys->s_status & KUp);		/*set kernelMode*/
+	kernelMode = (oldSys->s_status & KUp) >> 0x3;		/*set kernelMode*/
 	
-	/*if(oldSys->s_a0 != 8 && oldSys->s_a0 !=3 && oldSys->s_a0 !=4)
+	if(kernelMode == 1)
+	{
+		debugEx2(kernelMode, oldSys->s_a0, 999, 9);
+	}
+	/*
+	if(oldSys->s_a0 != 8 && oldSys->s_a0 !=3 && oldSys->s_a0 !=4)
 	{
 		debugEx2(oldSys->s_a0, 0, 0 , 0);
-	}*/
+		debugEx2(kernelMode, 99, 999, 9);
+	}
+	*/
 
 	/*If syscall is 9 or greater, kill it or pass up*/
-	if (oldSys->s_a0 >= 9) {
+	if (oldSys->s_a0 >= 9 && kernelMode == 0) {
 		
-		debugEx2(oldSys->s_a0, 3333, 3 , 333);
+		/*debugEx2(oldSys->s_a0, 3333, 3 , 333);*/
 
 		/*If the current process does not have a value for newTLB, kill it*/	
 		if(currentProcess->p_types[2].newState == NULL) { 
@@ -167,7 +176,7 @@ int syscallHandler(){
 	} 
 
 	/* check if we are in kernel mode and the syscall is from 1-8 */
-	if (oldSys->s_a0 < 9 && oldSys->s_a0 > 0 && kernelMode == 0) { 
+	else if (kernelMode == 0 && oldSys->s_a0 < 9 && oldSys->s_a0 > 0) { 
 
 		switch (oldSys->s_a0){
 
@@ -226,7 +235,7 @@ int syscallHandler(){
 	/* if the syscall was 1-8 but we are also in user mode*/ 
 	else {
 		
-		debugEx(121212, 12, 2, 2);
+		debugEx2(121212, 12, 2, 2);
 		
 		/* set the cause register to be a privileged instruction*/
 		oldSys->s_cause = (oldSys->s_cause | 10 << 2);
@@ -486,13 +495,10 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 		if(!waitForTermRead)
 		{
 			intlNo = intlNo - 2;
-
-			currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word for a terminal*/
 		}
 		else
 		{
 			intlNo = intlNo - 3;
-			currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word*/	
 		}
 
 	}
@@ -500,8 +506,6 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	else
 	{
 		intlNo = intlNo - 3;
-
-		currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word*/	
 	}
 
 	
@@ -528,6 +532,8 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 	}
 	
+	currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word*/
+	debugEx(deviceStatusList[intlNo][dnum] << 0x3, 101010, 00, 11);
 	
 	oldSys->s_pc = oldSys->s_pc + 4;
 	loadState(oldSys);

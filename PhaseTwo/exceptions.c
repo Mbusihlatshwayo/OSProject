@@ -147,104 +147,109 @@ int syscallHandler(){
 	}
 	*/
 
-	/*If syscall is 9 or greater, kill it or pass up*/
-	if (oldSys->s_a0 >= 9 && kernelMode == 0) {
+
+	/* if the syscall was 1-8 but we are also in user mode*/ 
+	if(kernelMode != 0){
+		debugEx2(kernelMode, oldSys->s_a0, 888, 8);
 		
-		/*debugEx2(oldSys->s_a0, 3333, 3 , 333);*/
+		if ((oldSys->s_a0 > 0) && (oldSys->s_a0 <= 8)){
+			debugEx2(kernelMode, oldSys->s_a0, 777, 7);
+			
+			/* set the cause register to be a privileged instruction*/
+			oldSys->s_cause = oldSys->s_cause | (10 << 2);
 
-		/*If the current process does not have a value for newTLB, kill it*/	
-		if(currentProcess->p_types[2].newState == NULL) { 
+			moveState(oldSys, oldProgram);
 
-			terminateProcess(currentProcess); 
-
-			currentProcess = NULL;	
-
-			scheduler();	
-
-		/*else "pass it up"*/	
-
-		} else {
-
-			moveState(oldProgram, currentProcess->p_types[2].oldState);
-
-			moveState(currentProcess->p_types[2].newState, &(currentProcess->p_s)); 
-
-			loadState(&(currentProcess->p_s));
-
-		}	
-
-	} 
-
+			programTrapHandler();
+		}
+	}
 	/* check if we are in kernel mode and the syscall is from 1-8 */
-	else if (kernelMode == 0 && oldSys->s_a0 < 9 && oldSys->s_a0 > 0) { 
+	else{ 
+		
+		if((oldSys->s_a0 > 0) && (oldSys->s_a0 <= 8)){
 
-		switch (oldSys->s_a0){
+			switch (oldSys->s_a0){
+			
 
-			case CREATEPROCESS: 		
+				case CREATEPROCESS: 		
 
-				createProcess((state_t *) oldSys->s_a1);  
+					createProcess((state_t *) oldSys->s_a1);  
 
-			break;	
+				break;	
 
-			case TERMINATEPROCESS:
+				case TERMINATEPROCESS:
 
-				terminateProcess(currentProcess);
+					terminateProcess(currentProcess);
 
-				scheduler();	
+					scheduler();	
 
-			break;
+				break;
 
-			case VERHOGEN:
-				verhogen((int *) oldSys->s_a1);
+				case VERHOGEN:
+					verhogen((int *) oldSys->s_a1);
 
-			break;	
+				break;	
 
-			case PASSEREN:
+				case PASSEREN:
 
-				passeren((int *) oldSys->s_a1);		
+					passeren((int *) oldSys->s_a1);		
 
-			break;
+				break;
 
-			case SPECTRAPVEC:
+				case SPECTRAPVEC:
 
-				specTrapVec((int) oldSys->s_a1, (state_t *) oldSys->s_a2, (state_t *) oldSys->s_a3);	
+					specTrapVec((int) oldSys->s_a1, (state_t *) oldSys->s_a2, (state_t *) oldSys->s_a3);	
 
-			break;
+				break;
 
-			case GETCPUTIME:
+				case GETCPUTIME:
 
-				getCPUTime();	
+					getCPUTime();	
 
-			break;
+				break;
 
-			case WAITCLOCK:
+				case WAITCLOCK:
 
-				waitForClock();	
+					waitForClock();	
 
-			break;
+				break;
 
-			case WAITIO:
-				waitForIO((int) oldSys->s_a1, (int) oldSys->s_a2, (int) oldSys->s_a3);		
+				case WAITIO:
+					waitForIO((int) oldSys->s_a1, (int) oldSys->s_a2, (int) oldSys->s_a3);		
 
-			break;
+				break;
 
+			}
 		}
 
 	}
+	
+	/*If syscall is 9 or greater, kill it or pass up*/
+	
+	debugEx2(kernelMode, oldSys->s_a0, 767, 7);
 
-	/* if the syscall was 1-8 but we are also in user mode*/ 
-	else {
-		
-		debugEx2(121212, 12, 2, 2);
-		
-		/* set the cause register to be a privileged instruction*/
-		oldSys->s_cause = (oldSys->s_cause | 10 << 2);
+	/*If the current process does not have a value for newTLB, kill it*/	
+	if(currentProcess->p_types[2].newState == NULL) { 
 
-		moveState(oldSys, oldProgram);
+		terminateProcess(currentProcess); 
 
-		programTrapHandler();
+		currentProcess = NULL;	
 
-	}
+		scheduler();	
+
+	/*else "pass it up"*/	
+
+	} else {
+
+		moveState(oldSys, currentProcess->p_types[2].oldState);
+
+		moveState(currentProcess->p_types[2].newState, &(currentProcess->p_s)); 
+
+		loadState(&(currentProcess->p_s));
+
+	}	
+
+
 
 	return 0;
 

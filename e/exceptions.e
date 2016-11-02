@@ -8,13 +8,17 @@
 *  Written by Mbusi & Gracie
 */
 
+#include "../h/const.h"
 #include "../h/types.h"
+#include "../e/pcb.e"
+#include "../e/interrupts.e"
+#include "../e/scheduler.e"
+#include "/usr/local/include/umps2/umps/libumps.e"
 
-extern cpu_t endTOD;
 
-extern int syscallHandler();
-extern int tlbHandler();
-extern int programTrapHandler();
+extern void syscallHandler();
+extern void tlbHandler();
+extern void programTrapHandler();
 extern void createProcess(state_t *statep);
 extern void terminateProcess(pcb_t *p);
 extern void verhogen(int *semaddr);

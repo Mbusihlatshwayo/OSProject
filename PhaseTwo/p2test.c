@@ -111,6 +111,11 @@ memaddr *p5MemLocation = 0;		/* To cause a p5 trap */
 void	p2(),p3(),p4(),p5(),p5a(),p5b(),p6(),p7(),p7a(),p5prog(),p5mm();
 void	p5sys(),p8root(),child1(),child2(),p8leaf();
 
+debugTest(int a , int b, int c, int d)
+{
+	int i = 1;
+	i = i +1;
+}
 
 /* a procedure to print on terminal 0 */
 void print(char *msg) {
@@ -144,6 +149,8 @@ void test() {
 
 	/* set up p2's state */
 	STST(&p2state);			/* create a state area             */	
+	
+	debugTest(1,2,3,4);
 	
 	p2state.s_sp = p2state.s_sp - QPAGE;			/* stack of p2 should sit above    */
 	p2state.s_pc = p2state.s_t9 = (memaddr)p2;		/* p2 starts executing function p2 */

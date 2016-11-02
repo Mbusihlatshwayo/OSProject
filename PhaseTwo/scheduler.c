@@ -11,12 +11,8 @@
 #include "../h/types.h"
 #include "../e/pcb.e"
 #include "../e/asl.e"
-#include "../e/exceptions.e"
-#include "../e/interrupts.e"
 #include "../e/initial.e"
-#include "../e/scheduler.e"
 #include "/usr/local/include/umps2/umps/libumps.e"
-
 
 /*******************Helper Functions********************/
 
@@ -25,12 +21,6 @@ void loadState(state_t *state){
 	LDST(state);
 	
 }
-
-debugSc(int a, int b, int c, int d)
- {
-	 int i = 0;
-	 i = i +1;
- }
 
 void scheduler(){
 	
@@ -49,8 +39,6 @@ void scheduler(){
 			}
 			/* Oh no - Deadlock is defined when the process count > 0 and the soft block count is zero*/ 
 			else if (processCount > 0 && softBlockCount == 0) {
-				
-				debugSc(processCount, emptyProcQ(readyQueue), softBlockCount, 55);
 	
 				PANIC();
 				

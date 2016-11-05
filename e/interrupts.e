@@ -15,7 +15,7 @@ int handleTerminalLine(int *semaddr);
 int findDevLine(memaddr causeAddr);
 int findDev(int lineNo);
 
-extern int interruptHandler();
+extern void interruptHandler();
 
 /***************************************************************/
 

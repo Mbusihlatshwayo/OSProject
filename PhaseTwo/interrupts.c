@@ -1,6 +1,6 @@
 /*****************************  Interrupts.c  *************************************** 
  * Occurs: When either a previously initiated I/O request completes or when either a processor Local
- * 		Timer/Interval Timer makes a 0x0000.0000 -> 0xFFFF.FFFF transition
+ * 		Timer/Interval Timer makes a 0x0000.0000 -> 0xFFFF.FFFF transition. 
  * 
  * Execute actions:
  * 1) Acknowledge the outstanding interrupt by writing acknowledge command code or a new command in the 
@@ -8,7 +8,17 @@
  * 2) Perform V operation on the sema4 associated with the interrupting (sub)device and pseudo-clock sema4.
  * 3) If SYS8was requested prior to the handling of this interrupt, store the interrupting (sub)device's 
  * 		status word in the newly unblocked process'es v0. Alternatively if SYS8 has not been called, 
- * 		store off the word until SYS8 is eventually called.*/
+ * 		store off the word until SYS8 is eventually called.
+ * 4) Note that time spent in I/O Handler is handled by storing off the TOD clock beofre interrupt
+ * 		and then putting that time spent in I/O Handler back on
+ * 
+ * Helper Functions:
+ * 		findDevLine: Finds what line interrupt is on.
+ * 		findDev: Finds what device on the line the interrupt is on.	
+ * 		handleTerminalLine: Handle the special case of the terminal line (7) where
+ * 			the interrupt could be for recevie or transmit.
+ * 		handleClockLines: Handles the special case of the two clock lines (1 & 2) 
+ * 			depending on what type of clock it is. */
 
 #include "../h/const.h"
 #include "../h/types.h"
@@ -21,7 +31,8 @@
 #include "/usr/local/include/umps2/umps/libumps.e"
 
 /****************Module global variables****************/
-cpu_t endTOD; 
+
+cpu_t endTOD; /*Used to restore time spent in I/O Handler*/
 
 HIDDEN state_t *oldINT = (state_t *) OLDINTERRUPT; /*Old interrupt state area*/
 
@@ -29,12 +40,6 @@ HIDDEN int termReceive = 0; /* set boolean value for if a line is a terminal w/ 
 HIDDEN devregarea_t *devregarea = (devregarea_t *) ADDRESS1; /* declare and initialize device area*/
 
 /*******************Helper Functions********************/
-
-debugInt(int a, int b, int c, int d)
- {
-	 int i = 0;
-	 i = i +1;
- }
 
 /*find the line that the interrupt is on by taking the old cause addr and 'AND'ing it w/ the line addreses (defined by cause bytes 8-15)
  * Lines:
@@ -129,7 +134,6 @@ int findDev(int lineNo){
 }
 
 /*Line 7 is a terminal line and because the status is split different than the rest of the lines, it has to be treated differently.*/
-
 int handleTerminalLine(int *semaddr)
 {
 	/*local vars */
@@ -161,7 +165,6 @@ void handleClockLines(int lineNo)
 	/*Highest priority Local Timer goes right on through to the readyQueue*/
 	if(lineNo == 1)
 	{
-		/*debugInt(lineNo, softBlockCount, 111,111);*/
 		moveState(oldINT, &(currentProcess->p_s));
 		
 		insertProcQ(&readyQueue, currentProcess);
@@ -178,14 +181,11 @@ void handleClockLines(int lineNo)
 		pcb_t *p;
 		
 		LDIT(CPUADDTIME); /*Load Interval Timer*/		
-		debugInt(lineNo, softBlockCount, p ,clockTimer);
 		
 		p = removeBlocked(&(clockTimer));
-		debugInt(lineNo, softBlockCount, p ,222);
 		
 		while(p != NULL)
 		{
-			debugInt(lineNo, softBlockCount, 333, 333);
 			insertProcQ(&readyQueue, p);
 			
 			clockTimer = clockTimer + 1;
@@ -202,7 +202,7 @@ void handleClockLines(int lineNo)
 /*******************Interrupt Handling***********************/
 
 /*Interrupts are handled by lowest number = highest priority*/
-int interruptHandler(){
+void interruptHandler(){
 	
 	/*Local Vars*/
 
@@ -235,15 +235,12 @@ int interruptHandler(){
 	if(line == 1 || line == 2)
 	{
 		handleClockLines(line);
-		/*debugInt(line,device,222,0);*/
 	}
 	
 	else
 	{
 		/*Step 2: Determine the instance # */
 		device = findDev(line);
-		
-		/*debugInt(line,device,0,0);*/
 		
 		/*Step 3: Calculate the sema4 for this device*/
 		deviceSemaIndex = (((line - 3) * 8) + device);
@@ -336,10 +333,5 @@ int interruptHandler(){
 	{
 		scheduler();
 	}
-	
-	
-	return 0;
-	
-	
 	
 }

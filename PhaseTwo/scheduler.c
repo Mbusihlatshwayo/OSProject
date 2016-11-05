@@ -3,7 +3,7 @@
  * 5 miliseconds. It also performs deadlock detection.
  * 
  * Helper Functions:
- * 		loadState: Performs LDST command on passed in state_t ptr. (for debugging purposes)
+ * 		loadState: Performs LDST command on passed in state_t ptr.
  * 
  ****************************************************************************/
 

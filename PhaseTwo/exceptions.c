@@ -3,6 +3,11 @@
  * This module handles Syscall/Bp Exceptions (1-8), Pgm Trap Exceptions, and
  * TLB Exceptions. 
  * 
+ * Helper functions: 
+ * 		passUpOrDie: If the exception is a PgmTrap, TLB, or 9+ Sys, this function
+ * 			determines if the process has called sys 5 and if it has it should
+ * 			be passed up, otherwise, kill it with sys 2.
+ * 
 
  ****************************************************************************/
 
@@ -19,32 +24,43 @@
 
 /****************Module global variables****************/
 
+cpu_t endTOD;	/*Used to keep track of TOD clock*/
 
+state_t *oldSys = (state_t *) OLDSYSCALL;	/*Old Syscall state*/
+state_t *oldProgram = (state_t *) OLDTRAP;	/*Old Trap state*/
+state_t *oldTLB = (state_t *) OLDTLB;	/*Old TLB state*/
 
-cpu_t endTOD;
+/*****************Helper Functions***********************/
 
-state_t *oldSys = (state_t *) OLDSYSCALL;
-state_t *oldProgram = (state_t *) OLDTRAP;
-state_t *oldTLB = (state_t *) OLDTLB;
+/*Helper function that handles if the TLB, pgm trap, or syscall should be passed up or killed*/
+void passUpOrDie(int type, state_t *oldState)
+{	
+	/*If the current process does not have a value for type (sys 5 has not been called), kill it*/	
+	if(currentProcess->p_types[type].newState == NULL) { 
 
+		terminateProcess(currentProcess); 
 
- debugEx(int a, int b, int c, int d)
- {
-	 int i = 0;
-	 i = i +1;
- }
- 
- debugEx2(int a, int b, int c, int d)
- {
-	 int i = 0;
-	 i = i +2;
- }
+		currentProcess = NULL;	
+
+		scheduler();	
+
+	/*else "pass it up"*/	
+	} else {
+
+		moveState(oldState, currentProcess->p_types[type].oldState);
+
+		moveState(currentProcess->p_types[type].newState, &(currentProcess->p_s)); 
+
+		loadState(&(currentProcess->p_s));
+
+	}
+}
 
 /*****************TLB Exception Handling*****************/
 
 /* Occurs: When MPS2 fails to translate a virtual address into its corresponding physical address.
  * 
- * Executes one of two actions based on if current process has performed a SYS5: 
+ * Executes one of two actions based on if current process has performed a SYS5 through helper function "passUpOrDie": 
  * 1) If process has not performed SYS5 - currentProcess and its progeny are "killed" (SYS2)
  * 2) If the process has performed SYS5 - "pass up" the processor state from TLB OLD AREA to the one
  * 		recorded in currentProcess and the processor new TLB state recorded in currentProcess becomes 
@@ -52,25 +68,7 @@ state_t *oldTLB = (state_t *) OLDTLB;
  
 void tlbHandler(){
 
-	/*debugEx(5454, 5, 4, 5);*/
-	/*If the current process does not have a value for newTLB, kill it*/	
-	if(currentProcess->p_types[0].newState == NULL) { 	
-
-		terminateProcess(currentProcess); 
-
-		currentProcess = NULL;
-
-		scheduler();
-
-	/*else "pass it up"*/	
-	} else {
-
-		moveState(oldTLB, currentProcess->p_types[0].oldState);
-
-		moveState(currentProcess->p_types[0].newState, &(currentProcess->p_s)); 
-
-		loadState(&(currentProcess->p_s));
-	}
+	passUpOrDie(0, oldTLB);
 
 }
 
@@ -80,7 +78,7 @@ void tlbHandler(){
 
 /* Occurs: When the executing process attempts to perform some illegal or undefined action
  * 
- * Executes one of two actions based on if current process has performed a SYS5: 
+ * Executes one of two actions based on if current process has performed a SYS5 through helper function "passUpOrDie": 
  * 1) If process has not performed SYS5 - currentProcess and its progeny are "killed" (SYS2)
  * 2) If the process has performed SYS5 - "pass up" the processor state from PGM OLD AREA to the one
  * 		recorded in currentProcess and the processor new PGM state recorded in currentProcess becomes 
@@ -88,27 +86,7 @@ void tlbHandler(){
 
 void programTrapHandler(){
 	
-	debugEx(5454, 5, 4, 5);
-
-	/*If the current process does not have a value for newPGM, kill it*/
-	if(currentProcess->p_types[1].newState == NULL) {
-
-		terminateProcess(currentProcess); 
-
-		currentProcess = NULL;
-
-		scheduler();
-
-	/* else, "pass it up"*/
-	} else { 
-
-		moveState(oldProgram, currentProcess->p_types[1].oldState);
-
-		moveState(currentProcess->p_types[1].newState, &(currentProcess->p_s)); 
-
-		loadState(&(currentProcess->p_s));
-
-	}
+	passUpOrDie(1, oldProgram);
 }
 
 
@@ -128,27 +106,13 @@ void syscallHandler(){
 	
 	currentProcess->p_s.s_pc = currentProcess->p_s.s_pc+4; 	/*move on from interrupt (so groundhog day won't happen)*/
 	
-	kernelMode = (oldSys->s_status & KUp) >> 0x3;		/*set kernelMode*/
-	
-	if(kernelMode == 1)
-	{
-		debugEx2(kernelMode, oldSys->s_a0, 999, 9);
-	}
-	/*
-	if(oldSys->s_a0 != 8 && oldSys->s_a0 !=3 && oldSys->s_a0 !=4)
-	{
-		debugEx2(oldSys->s_a0, 0, 0 , 0);
-		debugEx2(kernelMode, 99, 999, 9);
-	}
-	*/
+	kernelMode = (oldSys->s_status & KUp);		/*set kernelMode*/
 
 
 	/* if the syscall was 1-8 but we are also in user mode*/ 
 	if(kernelMode != 0){
-		debugEx2(kernelMode, oldSys->s_a0, 888, 8);
 		
 		if ((oldSys->s_a0 > 0) && (oldSys->s_a0 <= 8)){
-			debugEx2(kernelMode, oldSys->s_a0, 777, 7);
 			
 			/* set the cause register to be a privileged instruction*/
 			oldSys->s_cause = oldSys->s_cause | (10 << 2);
@@ -220,29 +184,7 @@ void syscallHandler(){
 	}
 	
 	/*If syscall is 9 or greater, kill it or pass up*/
-	
-	debugEx2(kernelMode, oldSys->s_a0, 767, 7);
-
-	/*If the current process does not have a value for newTLB, kill it*/	
-	if(currentProcess->p_types[2].newState == NULL) { 
-
-		terminateProcess(currentProcess); 
-
-		currentProcess = NULL;	
-
-		scheduler();	
-
-	/*else "pass it up"*/	
-
-	} else {
-
-		moveState(oldSys, currentProcess->p_types[2].oldState);
-
-		moveState(currentProcess->p_types[2].newState, &(currentProcess->p_s)); 
-
-		loadState(&(currentProcess->p_s));
-
-	}	
+	passUpOrDie(2, oldSys);
 
 }
 
@@ -297,8 +239,6 @@ void createProcess(state_t *statep) {
 void terminateProcess(pcb_t *p)
 
 {
-	/*debugEx2(10000,00,0,0);*/
-
 	/*call SYS2 recursively in order to get rid all children*/
 	while(!emptyChild(p)){
 
@@ -440,8 +380,6 @@ void specTrapVec(int type, state_t *oldP, state_t *newP) {
  * This means that the nucleaus must record in the PCB the amount of processor time used by each process*/
  
 void getCPUTime(){
-	
-	/*debugEx(clockTimer, 45454, 45,5);*/
 
 	/* place the processor time in microseconds in the v0 reg */
 	currentProcess->p_s.s_v0 = currentProcess->p_CPUTime;
@@ -506,8 +444,6 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 
 	/*Perform a P operation on the correct sema4*/
 	deviceList[intlNo][dnum] = (deviceList[intlNo][dnum])-1;
-	
-	debugEx(deviceList[intlNo][dnum], 1212, 2, 2); /*QUESTION: This impacts the "p2 is Okay" statement?!!*/ 
 
 	if(deviceList[intlNo][dnum] < 0)
 
@@ -527,8 +463,8 @@ void waitForIO(int intlNo, int dnum, int waitForTermRead){
 	}
 	
 	currentProcess->p_s.s_v0 = deviceStatusList[intlNo][dnum]; /*set the status word*/
-	debugEx(deviceStatusList[intlNo][dnum] << 0x3, 101010, 00, 11);
 	
 	loadState(&(currentProcess->p_s));
 
 }
+

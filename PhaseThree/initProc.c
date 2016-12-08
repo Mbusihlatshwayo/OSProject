@@ -12,6 +12,7 @@
 #include "../h/const.h"
 #include "../h/types.h"
 #include "../e/pcb.e"
+#include "../e/initProc.e"
 #include "../e/initial.e"
 #include "../e/asl.e"
 #include "../e/scheduler.e"
@@ -25,33 +26,29 @@
 int masterSem = 0;
 int swapSem = 1; 
 int diskSem = 1;
-/*pte_t pageTables[MAXPAGEPROCS];*/
-Tproc_t procs[MAXPAGEPROCS]
+Tproc_t procs[MAXPAGEPROCS];
 swap_t swapTables[SWAPPAGES];
 int sema4array[DEVICELISTNUM * DEVICENUM];
 pteOS_t KSegOS;
 
 void test()
 {
+	/*Local Vars*/
+	state_t processState;
+	segTbl_t* segTbl;
+	
 	/*Init ksegos*/
 	/*KSegOS.header = Something or other*/ /*Question: what is this?*/
-	for(int i=0; i < KSEGOSPTESIZE ;i++){
+	for(int i=0; i < KUSEGOSSIZE  ;i++){
 		KSegOS.pteTable[i].pte_entryHI = (0X2000 + i) << 12;
 		KSegOS.pteTable[i].pte_entryLO = ((0X2000 + i) << 12)| DIRTYON | GLOBALON | VALIDON;
 		
 	 }
-	 
-	/*initialize KSeg2
-	for (int i =0; i < MAXPAGEPROCS; i++){
-		init header here  
-		pageTables[i].pteTable.pte_entryHI = ASID;
-		pageTables[i].pteTable.pte_entryLO = (0X2000 + i) << 12;*/ 
-	}
 	
 	/*initialize swap pool */
-	for (int i = 0; i < SWAPPAGES; i++){ 
+	for(int i = 0; i < SWAPPAGES; i++){ 
 		swapTables[i].sw_asid = -1; 
-		swapTables[i].sw_pte = NULL
+		swapTables[i].sw_pte = NULL;
 	}
 	
 	/*Init sema4 array*/
@@ -61,33 +58,32 @@ void test()
 	
 	/* big loop for init processes */
 	for(int i = 1; i < MAXPAGEPROCS; i++) {
-		procs[i-1].Tp_pte.header = 1
+		procs[i-1].Tp_pte.header = 1;
 		
 		for(int j = 0; j < KUSEGPTESIZE; j++)
 		{
-			procs[i-1].Tp_pte.pteTable[j].pte_entryHI = (0x8000 + j) << 12 /*Question: shifted correctly?*/
+			procs[i-1].Tp_pte.pteTable[j].pte_entryHI = (0x8000 + j) << 12; /*Question: shifted correctly?*/
 			procs[i-1].Tp_pte.pteTable[j].pte_entryLO = ALLOFF | DIRTYON;
 		}
 		
 		/*Las entry in the table has different entry hi*/
-		procs[i-1].Tp_pte.pteTable[KUSEGPTESIZE-1].pte_entryHI = 0xBFFFF << 12 /*Question: shifted correctly?*/
+		procs[i-1].Tp_pte.pteTable[KUSEGPTESIZE-1].pte_entryHI = 0xBFFFF << 12; /*Question: shifted correctly?*/
 		
 		/*seg table init*/
-		segTbl_t* segTbl = (segTbl_t) STARTADDR; /*Question: What is segment table width?*/
+		segTbl = (segTbl_t *) STARTADDR; /*Question: What is segment table width?*/
 		segTbl->ksegOS = &KSegOS;
 		segTbl->kUseg2 = &(procs[i-1].Tp_pte);
 		
 		/*set up the state for process*/
-		state_t processState;
 		processState.s_pc = (memaddr) midwife;
 		processState.s_t9 = (memaddr) midwife;
 		processState.s_status = ALLOFF | IEc | TE | IM;
 		processState.s_asid = i << 6;
-		processState.s_sp = 0 /*Question: What is this??*/
+		processState.s_sp = 0; /*Question: What is this??*/
 		
 
 		
-		SYSCALL(CREATEPROCESS,&processState,0,0);
+		SYSCALL(CREATEPROCESS,(int)&processState,0,0);
 	}
 	
 	/*P on the device sema4s*/

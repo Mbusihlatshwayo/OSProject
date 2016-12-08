@@ -24,70 +24,78 @@
 
 int masterSem = 0;
 int swapSem = 1; 
-pte_t pageTables[MAXPAGEPROCS];
+int diskSem = 1;
+/*pte_t pageTables[MAXPAGEPROCS];*/
+Tproc_t procs[MAXPAGEPROCS]
 swap_t swapTables[SWAPPAGES];
+int sema4array[DEVICELISTNUM * DEVICENUM];
 pteOS_t KSegOS;
 
 void test()
 {
 	/*Init ksegos*/
-	/*KSegOS.header = Something or other*/
+	/*KSegOS.header = Something or other*/ /*Question: what is this?*/
 	for(int i=0; i < KSEGOSPTESIZE ;i++){
-		KSegOS.pteTable[i].pte_entryHI = (0X2000 + i) << 6;
-		/*KSegOS.pteTable[i].pte_entryLO = (0X2000 + i) | DirtyBit | Global | Valid; */
+		KSegOS.pteTable[i].pte_entryHI = (0X2000 + i) << 12;
+		KSegOS.pteTable[i].pte_entryLO = ((0X2000 + i) << 12)| DIRTYON | GLOBALON | VALIDON;
 		
 	 }
 	 
-	/*initialize KSeg2*/ 
+	/*initialize KSeg2
 	for (int i =0; i < MAXPAGEPROCS; i++){
-		/* init header here */ 
+		init header here  
 		pageTables[i].pteTable.pte_entryHI = ASID;
-		pageTables[i].pteTable.pte_entryLO = (0X2000 + i) << 12;
+		pageTables[i].pteTable.pte_entryLO = (0X2000 + i) << 12;*/ 
 	}
 	
 	/*initialize swap pool */
 	for (int i = 0; i < SWAPPAGES; i++){ 
-		swapTables[i].sw_asid = -1; /* all init to one? */
-		swapTables[i].sw_segNo = 0X8000 << 6; /* shift left six? */ 
-		swapTables[i].sw_pageNo = i;
-		swapTables[i].sw_pte = /* come back optional?*/ 
+		swapTables[i].sw_asid = -1; 
+		swapTables[i].sw_pte = NULL
 	}
 	
 	/*Init sema4 array*/
-	for (int i = 0; i < 48; i++) {
+	for (int i = 0; i < (DEVICELISTNUM*DEVICENUM); i++) {
 		sema4array[i] = 1; 
 	}
 	
-	/* big loop goes here */
+	/* big loop for init processes */
 	for(int i = 1; i < MAXPAGEPROCS; i++) {
-		/*pageTables[i].header = somethingsomething*/
+		procs[i-1].Tp_pte.header = 1
 		
 		for(int j = 0; j < KUSEGPTESIZE; j++)
 		{
-			pageTables[i].pteTable[j].pte_entryHI = ASID;
-			pageTables[i].pteTable[j].pte_entryLO = (0X2000 + i) << 12;
+			procs[i-1].Tp_pte.pteTable[j].pte_entryHI = (0x8000 + j) << 12 /*Question: shifted correctly?*/
+			procs[i-1].Tp_pte.pteTable[j].pte_entryLO = ALLOFF | DIRTYON;
 		}
 		
-		/*Last entry in the table is werid..something with entryHI?*/
+		/*Las entry in the table has different entry hi*/
+		procs[i-1].Tp_pte.pteTable[KUSEGPTESIZE-1].pte_entryHI = 0xBFFFF << 12 /*Question: shifted correctly?*/
 		
 		/*seg table init*/
-		/*segTbl_t* segTbl = (segTbl_t) ADDRESS*/
+		segTbl_t* segTbl = (segTbl_t) STARTADDR; /*Question: What is segment table width?*/
 		segTbl->ksegOS = &KSegOS;
-		segTbl->kUseg2 = &(pageTables[i].pteTable);
+		segTbl->kUseg2 = &(procs[i-1].Tp_pte);
 		
-		/*set up the state 
+		/*set up the state for process*/
 		state_t processState;
-		* 
-		*/
+		processState.s_pc = (memaddr) midwife;
+		processState.s_t9 = (memaddr) midwife;
+		processState.s_status = ALLOFF | IEc | TE | IM;
+		processState.s_asid = i << 6;
+		processState.s_sp = 0 /*Question: What is this??*/
 		
-		SYSCALL(CREATEPROCESS,0,0,0);
+
+		
+		SYSCALL(CREATEPROCESS,&processState,0,0);
 	}
 	
 	/*P on the device sema4s*/
 	for(int i = 0; i < MAXPAGEPROCS; i++)
 	{
-		SYSCALL(PASSEREN, (int) &sema4array[i],0,0);
+		SYSCALL(PASSEREN, (int)&masterSem,0,0);
 	}
+	
 	
 	/* call sys 2 the end! */
 	SYSCALL(TERMINATEPROCESS, 0,0,0);

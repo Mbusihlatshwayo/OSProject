@@ -25,7 +25,7 @@
 
 int masterSem = 0;
 int swapSem = 1; 
-int diskSem = 1;
+int diskSem0 = 1;
 Tproc_t procs[MAXPAGEPROCS];
 swap_t swapTables[SWAPPAGES];
 int sema4array[DEVICELISTNUM * DEVICENUM];
@@ -38,7 +38,7 @@ void test()
 	segTbl_t* segTbl;
 	
 	/*Init ksegos*/
-	/*KSegOS.header = Something or other*/ /*Question: what is this?*/
+	/*KSegOS.header = Something or other*/ /*Question: Magic num (42 in hex)  | 64*/
 	for(int i=0; i < KUSEGOSSIZE  ;i++){
 		KSegOS.pteTable[i].pte_entryHI = (0X2000 + i) << 12;
 		KSegOS.pteTable[i].pte_entryLO = ((0X2000 + i) << 12)| DIRTYON | GLOBALON | VALIDON;
@@ -70,7 +70,7 @@ void test()
 		procs[i-1].Tp_pte.pteTable[KUSEGPTESIZE-1].pte_entryHI = 0xBFFFF << 12; /*Question: shifted correctly?*/
 		
 		/*seg table init*/
-		segTbl = (segTbl_t *) STARTADDR; /*Question: What is segment table width?*/
+		segTbl = (segTbl_t *) STARTADDR; /*Question: What is segment table width? 3 ptrs for each ASID (64 x 3)*/
 		segTbl->ksegOS = &KSegOS;
 		segTbl->kUseg2 = &(procs[i-1].Tp_pte);
 		
@@ -79,7 +79,7 @@ void test()
 		processState.s_t9 = (memaddr) midwife;
 		processState.s_status = ALLOFF | IEc | TE | IM;
 		processState.s_asid = i << 6;
-		processState.s_sp = 0; /*Question: What is this??*/
+		processState.s_sp = 0; /*Question: Math- 0x200000 + 64 or something...*/
 		
 
 		
@@ -99,6 +99,8 @@ void test()
 
 
 void midwife(){
+	
+	/*header for kuseg2 is magic num(42) | 31*/
 
 	
 }

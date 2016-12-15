@@ -26,9 +26,11 @@
 int masterSem = 0;
 int swapSem = 1; 
 int diskSem0 = 1;
+
 Tproc_t procs[MAXPAGEPROCS];
 swap_t swapTables[SWAPPAGES];
 int sema4array[DEVICELISTNUM * DEVICENUM];
+
 pteOS_t KSegOS;
 
 /*******************Main Functions***********************/
@@ -161,7 +163,15 @@ void midwife(){
 	}
 	
 	/*Set up process state*/
+	state_t processState;
+	processState.s_t9 = (memaddr) 0x8000.00B0;
+	processState.s_pc = (memaddr) 0x8000.00B0;
+	processState.s_asid = getENTRYHI();
 	
+
+	procState.s_status = ALLOFF | TE | VMc | IM;
+	LDST(&processState);
+
 	
 	
 	/*header for kuseg2 is magic num(42) | 31*/

@@ -4,6 +4,7 @@
  * It exports the VM-IO support level's global variables
  * 
  * Helper functions: 
+ * 		setStateAreas-Init the U-Procs three new processor state areas
  * 		
  * 
 
@@ -25,7 +26,7 @@
 
 int masterSem = 0;
 int swapSem = 1; 
-int diskSem0 = 1;
+int diskSem = 1;
 
 Tproc_t procs[MAXPAGEPROCS];
 swap_t swapTables[SWAPPAGES];
@@ -51,7 +52,7 @@ void test()
 		SYSCALL(PASSEREN, (int)&masterSem,0,0);
 	}
 	
-	/*initialize swap pool */
+	/*Initialize swap pool */
 	for(int i = 0; i < SWAPPAGES; i++){ 
 		swapTables[i].sw_asid = -1; 
 		swapTables[i].sw_pte = NULL;
@@ -65,11 +66,10 @@ void test()
 		
 	 }
 	
-	/* big loop for init u-procs (page 50 blue book)*/
+	/*Big loop for init u-procs (page 50 blue book)*/
 	for(int i = 1; i < MAXPAGEPROCS +1; i++) {
 		
 		/*Assign the U-Proc a unique ASID*/
-		processState.s_asid = i << 6;
 		
 		/*Init the U-Procs KUseg2 PTE*/
 		procs[i-1].Tp_pte.header = 1;
@@ -84,52 +84,17 @@ void test()
 		/*Init the u-proc's private sema4*/
 		procs[i-1].Tp_sem = 0;
 		
-		/*Init the U=proc's segment table*/
+		/*Init the U-proc's segment table*/
 		segTbl = (segTbl_t *) STARTADDR + (i * 24); /*multiply by segtable width*/
 		segTbl->ksegOS = &KSegOS;
-		segTbl->kUseg2 = &(procs[i].Tp_pte);
+		segTbl->kUseg2 = &(procs[i-1].Tp_pte);		
 		
-		/*Init the U-proc's three (pgmTrap, TLB, and SYS/Bp) new processor state areas*/
-		/*Question: This goes here?? Blue book steps..*/
-		state_t * newArea;
-		
-		for(int j = 0; j < TRAPTYPES; j++)
-		{
-			newArea = &(procs[i-1].Tnew_trap[j]);
-			newArea->s_asid = getENTRYHI();
-			newArea->s_status = ALLOFF | IM | TE | VMc; /*Interrupts on, Timer on, Virtual Memory on*/
-			
-			/*Based on the Traptype, set the stack pointer & pc*/
-			if(j == TLBTRAP)
-			{
-				newArea->s_pc = (memaddr) "respective support lvl";
-				newArea->s_t9 = (memaddr) "respective support lvl";
-				newArea->s_sp  = MATHMATH;
-			}
-			
-			else if (j == PROGTRAP)
-			{
-				newArea->s_pc = (memaddr) "respective support lvl";
-				newArea->s_t9 = (memaddr) "respective support lvl";
-				newArea->s_sp  = MATHMATH;
-			}
-			
-			else
-			{
-				newArea->s_pc = (memaddr) "respective support lvl";
-				newArea->s_t9 = (memaddr) "respective support lvl";
-				newArea->s_sp  = MATHMATH;
-			}
-			
-		}
-		
-		
-		/*set up the state for process for "step 2" of u-proc initilization*/
+		processState.s_asid = i << 6;
 		processState.s_pc = (memaddr) midwife;
 		processState.s_t9 = (memaddr) midwife;
 		processState.s_status = ALLOFF | TE | IM; /*Interrupts enabled, user-mode off, timer on*/
-		processState.s_sp = (ROMPAGESTART + 0x40); /*Question: Come back here..*/
-		
+		processState.s_sp = TAPEBUFFERSTART - (SYSSTACK + (2*(i-1)*PAGESIZE));/*set to the SYSCALL stack*/
+			
 		/*Create the process (SYS 1)*/
 		SYSCALL(CREATEPROCESS,(int)&processState,0,0);
 	}
@@ -145,36 +110,90 @@ void midwife(){
 	int asid = getENTRYHI();
 	asid = asid & MASKBIT >> 6; /*Mask what we dont need in register*/
 	
+	/*set up the state for process for "step 2" of u-proc initilization*/
+	state_t * newArea = setStateAreas();
+	
 	/*Perform the three SYS5 operations*/
 	for(int i =0; i < TRAPTYPES; i++)
 	{
-		SYSCALL(SPECTRAPVEC, i, (int)&(procs[asid-1].Told_trap[i]), (int)&(procs[asid-1].Tnew_trap[i]);
+		SYSCALL(SPECTRAPVEC, i, (int)&(procs[asid-1].Told_trap[i]), (int)newArea);
 	}
-	
-	/*Device registers in phase 2 terminal 0*/
-	
-	/*Read the contents of tape device (asid-1) onto backing store (disk 0) until end*/
-	/*Question: what is value of end of tape and end of file? p.40*/
-	device_t *tape = (device_t*) 
-	device_t *disk = (device_t*)
-	device_t *buffer = (device_t*)
-	while((tape->d_data1 != EOT) && ( tape-> d_data1 !=EOF){
 		
+	/*Read the contents of tape device (asid-1) onto backing store (disk 0) until end*/
+	device_t *tape = (device_t*) TAPEDEV + ((asid-1) * DEVREGSIZE);
+	device_t *disk = (device_t*) DISKDEV;
+	int buffer = BUFFERSTART + ((asid-1) * PAGESIZE);
+	
+	int pageNum = 0; /*Do the while loop write for each page*/
+	
+	while((tape->d_data1 != EOT) && ( tape-> d_data1 !=EOF){
+		tape->d_data0 = buffer; /*Specify the starting physical address for a DMA read operation*/
+		
+		/*Read the current block up to the next EOB/EOT marker and copy it to RAM starting at data 0 addr (buffer)*/
+		tape->d_command = READBLK;
+		
+		/*block for disk 0*/
+		SYSCALL(PASSEREN, (int)&diskSem,0,0);
+		
+		/*Find correct cylinder based on asid*/
+		int command = (asid) << 8;
+		disk->d_command = command;
+		
+		/*write on disk??*/
+		
+		/*unblock sema4*/
+		SYSCALL(VERHOGEN, (int)&diskSem,0,0);
+		
+		pageNum = pageNum  + 1;
 	}
 	
 	/*Set up process state*/
 	state_t processState;
-	processState.s_t9 = (memaddr) 0x8000.00B0;
-	processState.s_pc = (memaddr) 0x8000.00B0;
+	processState.s_t9 = (memaddr) PAGE52ADDR;
+	processState.s_pc = (memaddr) PAGE52ADDR;
+	processState.s_sp = LASTSEG2PG;
 	processState.s_asid = getENTRYHI();
 	
 
 	procState.s_status = ALLOFF | TE | VMc | IM;
 	LDST(&processState);
+	
+}
 
+state_t setStateAreas()
+{	
+	/*Init the U-proc's three (pgmTrap, TLB, and SYS/Bp) new processor state areas*/
+	state_t * newArea;
 	
+	for(int j = 0; j < TRAPTYPES; j++)
+	{
+		newArea = &(procs[i-1].Tnew_trap[j]);
+		newArea->s_asid = getENTRYHI();
+		newArea->s_status = ALLOFF | IM | TE | VMc; /*Interrupts on, Timer on, Virtual Memory on*/
+		
+		/*Based on the Traptype, set the stack pointer & pc*/
+		if(j == TLBTRAP)
+		{
+			newArea->s_pc = (memaddr) pager;
+			newArea->s_t9 = (memaddr) pager;
+			newArea->s_sp = (TAPEBUFFSTART - (2 * (asid-1) * PAGESIZE));
+		}
+		
+		else if (j == PROGTRAP)
+		{
+			newArea->s_pc = (memaddr) handleSyscall;
+			newArea->s_t9 = (memaddr) handleSyscall;
+			newArea->s_sp = (TAPEBUFFSTART - ((2 * (asid-1) * PAGESIZE) + (PAGESIZE * j)));
+		}
+		
+		else
+		{
+			newArea->s_pc = (memaddr) handleSyscall;
+			newArea->s_t9 = (memaddr) handleSyscall;
+			newArea->s_sp  = (TAPEBUFFSTART - ((2 * (asid-1) * PAGESIZE) + (PAGESIZE * j)));
+		}
+		
+	}
 	
-	/*header for kuseg2 is magic num(42) | 31*/
-
-	
+	return &newArea
 }

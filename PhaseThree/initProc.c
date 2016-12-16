@@ -148,12 +148,19 @@ void midwife(){
 		/*block for disk 0*/
 		SYSCALL(PASSEREN, (int)&diskSem,0,0);
 		
+		/*Set interrupts off*/
+		
 		/*Question: Find correct cylinder based on asid*/
 		/*Question: Command correct?*/
-		int command = (asid) << 8;
+		int command = (asid) << 8 /*OR with SEEKCYL (seek command) This is page#;
 		disk->d_command = command;
 		
-		/*Question: Write on disk? (5.4 Yellowbook)*/
+		/*Question: Write on disk? (5.4 Yellowbook)
+		 * 3-read 4-write
+		 * p.39
+		 * */
+		
+		/*set interrupts on*/
 		
 		/*Wait for data write*/
 		status = SYSCALL(WAITIO, DISKINT, 0, 0);

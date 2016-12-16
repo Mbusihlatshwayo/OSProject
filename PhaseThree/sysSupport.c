@@ -1,4 +1,4 @@
-/*****************************  InitProc.c  *************************************** 
+/*****************************  SysSupport.c  ********************************* 
  * This module implements the VM-IO support level sys/BP and pgmTrap exception handlers.
  * Occurs: When a Syscall or Breakpoint assembler instuction is executed.
  * Executes some instruction based on the value of 9-18 found in a[0]	
@@ -18,27 +18,35 @@
 
 
 /****************Module global variables****************/
-int asid = getENTRYHI();
-asid = (asid & MASKBIT) >> 6;
-	
-state_t * uProc = &(procs[asid-1].Told_trap[SYSTRAP]);
+int asid;
+state_t * uProc;
 
 /*Based on value in the calling uproc's a0, call the correct action*/
 void handleSyscall(){
+	
+	/*set up global vars*/
+	asid =  getENTRYHI();
+	asid = (asid & MASKBIT) >> 6;
+	
+	uProc = &(procs[asid-1].Told_trap[SYSTRAP]);
 	
 	switch (uProc->s_a0){	
 
 		case (WRITETERMINAL): 		
 
-			writeTerminal(char *virtAddr, int len); 
+			writeTerminal(); 
 
 		break;	
 
 		case (WRITEPRINTER):
 
-			writePrinter(char *virtAddr, int len);
+			writePrinter();
 
 		break;
+		
+		case (GETTOD)
+			
+			getTOD();
 		
 		case (TERMINATE):
 		
@@ -57,9 +65,10 @@ void handleSyscall(){
 /*Syscall 10 causes the uProc to be suspended until a line of output has been transmitted to the
  * terminal device associated with that uProc. If all characters transmit successfully, the number
  * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
-void writeTerminal(char *virtAddr, int len){
+void writeTerminal(){
 	
-	/*Question: I never call this specifically in my code, so does the test file pass in the params?*/
+	int len = uProc->s_a2;
+	char *str = uProc->s_a1;
 	
 	/*Get the device register for the terminal we will write to */
 	device_t* terminal = (device_t*) TERMDEV + ((asid-1) * DEVREGSIZE)
@@ -75,11 +84,14 @@ void writeTerminal(char *virtAddr, int len){
 	/*For each character give the transmit command to the terminal*/
 	for (int i = 0; i < len; i++){
 		
-		int command = virtAddr[i];
-		/*Question: command thing again...*/
+		int command = (str[i] << 8) | TRANSMITCHAR; /*page 47 yellow*/
+		
+		/*Question: statusChange off?*/
 		
 		terminal->t_transm_command = command;
 		status = SYSCALL (WAITIO, TERMINT, asid-1, 0);
+		
+		/*Question: statusChange on?*/
 		
 		/*if terminal status is not 5 (character transmitted), negate for v0*/
 		if((status &  0x0F) != CHARTRANS)
@@ -95,9 +107,10 @@ void writeTerminal(char *virtAddr, int len){
 /*Syscall 16 causes the uProc to be suspended until a line of output has been transmitted to the
  * printer device associated with that uProc. If all characters transmit successfully, the number
  * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
-void writePrinter(char *virtAddr, int len){
+void writePrinter(){
 	
-	/*Question: I never call this specifically in my code, so does the test file pass in the params?*/
+	int len = uProc->s_a2;
+	char *str = uProc->s_a1;
 	
 	/*Get the device register for the printer we will write to */
 	device_t* printer = (device_t*) PRNTDEV + ((asid-1) * DEVREGSIZE)
@@ -114,10 +127,10 @@ void writePrinter(char *virtAddr, int len){
 	for (int i = 0; i < len; i++){
 		
 		/*Give command and load character into data0*/
-		printer->d_data0 = virtAddr[i];
-		printer->d_command = PRINTCHR;
+		printer->d_data0 = str[i];
+		printer->d_command = PRINTCHR;	
 		
-		status = SYSCALL (WAITIO, PRNTINT, asid-1, 0);
+		status = SYSCALL (WAITIO, PRNTINT, asid-1, 0); /*wait*/
 		
 		/*if device status is not 1 (ready), negate for v0*/
 		if(status != READY)
@@ -129,10 +142,19 @@ void writePrinter(char *virtAddr, int len){
 	loadState(uProc);
 	
 }
+
+/*Syscall 17 places the number of microseconds in uproc's v0 since the system was last rebooted.*/
+void getTOD()
+{
+	cpu_t time;
+	
+	STCK(time);
+	uProc->s_v0 = time;
+	
+	loadState(uProc);
+}
 /*Syscall 18 causes the executing U-proc to cease to exist*/
 void terminate(){
-	
-	/*Question: is this it?*/
 	
 	TLBCLR(); /*nuke page table*/
 	

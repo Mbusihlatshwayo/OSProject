@@ -1,141 +1,141 @@
-/* this module implements the VM-IO support level sys/BP and pgmTrap exception handlers */
-
-/* NEED WRITETERMINAL WRITEPRINTER */
+/*****************************  InitProc.c  *************************************** 
+ * This module implements the VM-IO support level sys/BP and pgmTrap exception handlers.
+ * Occurs: When a Syscall or Breakpoint assembler instuction is executed.
+ * Executes some instruction based on the value of 9-18 found in a[0]	
+ * 
+ ****************************************************************************/
 
 #include "../h/const.h"
 #include "../h/types.h"
 #include "../e/pcb.e"
+#include "../e/initProc.e"
+#include "../e/initial.e"
 #include "../e/asl.e"
 #include "../e/scheduler.e"
-#include "../e/initial.e"
-#include "../e/interrupts.e"
 #include "../e/exceptions.e"
+#include "../e/interrupts.e"
 #include "/usr/local/include/umps2/umps/libumps.e"
 
 
-/* globals */
+/****************Module global variables****************/
+int asid = getENTRYHI();
+asid = (asid & MASKBIT) >> 6;
+	
+state_t * uProc = &(procs[asid-1].Told_trap[SYSTRAP]);
 
-state_t *oldSys = (state_t *) OLDSYSCALL;	/*Old Syscall state*/
-
-
+/*Based on value in the calling uproc's a0, call the correct action*/
 void handleSyscall(){
 	
-	
-	switch (oldSys->s_a0){
-			
+	switch (uProc->s_a0){	
 
-				case WRITETERMINAL: 		
+		case (WRITETERMINAL): 		
 
-					writeTerminal(char *virtAddr, int len); 
+			writeTerminal(char *virtAddr, int len); 
 
-				break;	
+		break;	
 
-				case WRITEPRINTER:
+		case (WRITEPRINTER):
 
-					writePrinter(char *virtAddr, int len);
+			writePrinter(char *virtAddr, int len);
 
-				break;
-				
-				case TERMINATE:
-				
-					terminate();
-				
-				break;
+		break;
+		
+		case (TERMINATE):
+		
+			terminate();
+		
+		break;
+		
+		default:
+		
+			terminate(); /*Kill the ones we don't have a syscall set up for*/
 				
 	}
 
 }
 
+/*Syscall 10 causes the uProc to be suspended until a line of output has been transmitted to the
+ * terminal device associated with that uProc. If all characters transmit successfully, the number
+ * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
 void writeTerminal(char *virtAddr, int len){
 	
-	char string[];
-	state_t *proc;
+	/*Question: I never call this specifically in my code, so does the test file pass in the params?*/
 	
-	/*Who am I?*/
-	int asid = getENTRYHI();
-	asid = asid & MASKBIT >> 6; /*Mask what we dont need in register*/
+	/*Get the device register for the terminal we will write to */
+	device_t* terminal = (device_t*) TERMDEV + ((asid-1) * DEVREGSIZE)
 	
-	proc = getCaller(asid, SYSTRAP);
-	string = proc->s_a1;
-	
-	/* get the device register for the terminal we will write to */
-	
-	/* handle terminal stuff here */
-	
-	proc->s_v0 = 0;
-	LDST(proc);
-
-	
-	int leng, status;
-
-	if(len < 0 || len > 128) {
+	/*It is an error to write to a terminal device from an address in ksegOS, request a SYS10 with a length
+	 * less than 0, or a length greater than 128. Any of these errors result in a terminate.*/
+	if(len < 0 || len > 128 || virtAddr <= (char*) OSEND) {
 		
 		terminate();
 		
 	}
 
-
-	for (leng = 0; str[leng] != '\0'; leng++);
+	/*For each character give the transmit command to the terminal*/
+	for (int i = 0; i < len; i++){
+		
+		int command = virtAddr[i];
+		/*Question: command thing again...*/
+		
+		terminal->t_transm_command = command;
+		status = SYSCALL (WAITIO, TERMINT, asid-1, 0);
+		
+		/*if terminal status is not 5 (character transmitted), negate for v0*/
+		if((status &  0x0F) != CHARTRANS)
+		{
+			i = i * -1; 
+		}
 	
-	status = SYSCALL (device, (int)str, leng, 0);
-	
-	if (status < 0) {
-		status = SYSCALL (device, (int)s, 26, 0);
-		SYSCALL (TERMINATE, 0, 0, 0);
-	}
+	uProc->s_v0 = i;
+	loadState(uProc);
 	
 }
 
-void writePrinter(){
+/*Syscall 16 causes the uProc to be suspended until a line of output has been transmitted to the
+ * printer device associated with that uProc. If all characters transmit successfully, the number
+ * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
+void writePrinter(char *virtAddr, int len){
 	
-	char string[];
-	state_t *proc;
+	/*Question: I never call this specifically in my code, so does the test file pass in the params?*/
 	
-	/*Who am I?*/
-	int asid = getENTRYHI();
-	asid = asid & MASKBIT >> 6; /*Mask what we dont need in register*/
+	/*Get the device register for the printer we will write to */
+	device_t* printer = (device_t*) PRNTDEV + ((asid-1) * DEVREGSIZE)
 	
-	proc = getCaller(asid, SYSTRAP);
-	string = proc->s_a1;
-	
-	/* get the device register for the terminal we will write to */
-	
-	/* handle terminal stuff here this is slightly diff from terminal above */
-	
-	proc->s_v0 = 0;
-	LDST(proc);
-
-	
-	int leng, status;
-
-	if(len < 0 || len > 128) {
+	/*It is an error to write to a printer device from an address in ksegOS, request a SYS10 with a length
+	 * less than 0, or a length greater than 128. Any of these errors result in a terminate.*/
+	if(len < 0 || len > 128 || virtAddr <= (char*) OSEND) {
 		
 		terminate();
 		
 	}
 
-
-	for (leng = 0; str[leng] != '\0'; leng++);
+	/*For each character give the transmit command to the terminal*/
+	for (int i = 0; i < len; i++){
+		
+		/*Give command and load character into data0*/
+		printer->d_data0 = virtAddr[i];
+		printer->d_command = PRINTCHR;
+		
+		status = SYSCALL (WAITIO, PRNTINT, asid-1, 0);
+		
+		/*if device status is not 1 (ready), negate for v0*/
+		if(status != READY)
+		{
+			i = i * -1; 
+		}
 	
-	status = SYSCALL (device, (int)str, leng, 0);
-	
-	if (status < 0) {
-		status = SYSCALL (device, (int)s, 26, 0);
-		SYSCALL (TERMINATE, 0, 0, 0);
-	}
+	uProc->s_v0 = i;
+	loadState(uProc);
 	
 }
+/*Syscall 18 causes the executing U-proc to cease to exist*/
 void terminate(){
 	
-	int asid = getENTRYHI();
-	asid = asid & MASKBIT >> 6;
-	state_t *proc;
-	proc = getCaller(asid, SYSTRAP);
+	/*Question: is this it?*/
 	
-	SYSCALL(PASSEREN, (int)&swapSem, 0, 0);
-	TLBCLR();
-	SYSCALL(VERHOGEN,(int)&swapSem, 0, 0);
+	TLBCLR(); /*nuke page table*/
 	
-	SYSCALL(TERMINATEPROCESS,0,0,0);
+	SYSCALL(TERMINATEPROCESS,0,0,0); /*nuke the process*/
 	
 }

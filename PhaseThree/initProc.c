@@ -1,7 +1,7 @@
-/*****************************  Exceptions.c  *************************************** 
+/*****************************  InitProc.c  *************************************** 
 
- * this module implements test() and all the U-proc initialization routines. 
- * It exports the VM-IO support level's global variables
+ * This module implements test and all the U-proc initialization routines. 
+ * It exports the VM-IO support level's global variables.
  * 
  * Helper functions: 
  * 		setStateAreas-Init the U-Procs three new processor state areas
@@ -24,24 +24,28 @@
 
 /****************Module global variables****************/
 
+/*semaphore's for mutual exclusion/schronization*/
 int masterSem = 0;
 int swapSem = 1; 
 int diskSem = 1;
 
+/*Arrays for u-procs, mutual exclusion sema4s, and swappool pages*/
 Tproc_t procs[MAXPAGEPROCS];
 swap_t swapTables[SWAPPAGES];
 int sema4array[DEVICELISTNUM * DEVICENUM];
 
+/*KsegOS page table*/
 pteOS_t KSegOS;
 
-/*******************Main Functions***********************/
+/*******************Main Function***********************/
+/*Initialize the VM-support level global vars including the u-procs.*/
 void test()
 {
 	/*Local Vars*/
 	state_t processState;
 	segTbl_t* segTbl;
 	
-	/*Init sema4 array*/
+	/*Init sema4 array to 1  for mutual exclusion*/
 	for (int i = 0; i < (DEVICELISTNUM*DEVICENUM); i++) {
 		sema4array[i] = 1; 
 	}
@@ -55,10 +59,12 @@ void test()
 	/*Initialize swap pool */
 	for(int i = 0; i < SWAPPAGES; i++){ 
 		swapTables[i].sw_asid = -1; 
+		swapTables[i].segNo = 0;
+		swapTables[i].pageNo = 0;
 		swapTables[i].sw_pte = NULL;
 	}
 	
-	/*Init ksegos*/
+	/*Init ksegos*/INT
 	KSegOS.header = (MAGICNUMBER << 24) | KUSEGOSSIZE;
 	for(int i=0; i < KUSEGOSSIZE  ;i++){
 		KSegOS.pteTable[i].pte_entryHI = (SEGOSADDR + i) << 12;
@@ -69,10 +75,8 @@ void test()
 	/*Big loop for init u-procs (page 50 blue book)*/
 	for(int i = 1; i < MAXPAGEPROCS +1; i++) {
 		
-		/*Assign the U-Proc a unique ASID*/
-		
 		/*Init the U-Procs KUseg2 PTE*/
-		procs[i-1].Tp_pte.header = 1;
+		procs[i-1].Tp_pte.header = (MAGICNUMBER << 24) | KUSEGOSSIZE;
 		for(int j = 0; j < KUSEGPTESIZE; j++)
 		{
 			procs[i-1].Tp_pte.pteTable[j].pte_entryHI = (SEGTWOADDR + j) << 12; 
@@ -89,7 +93,7 @@ void test()
 		segTbl->ksegOS = &KSegOS;
 		segTbl->kUseg2 = &(procs[i-1].Tp_pte);		
 		
-		processState.s_asid = i << 6;
+		processState.s_asid = i << 6;	/*Assign the U-Proc a unique ASID*/
 		processState.s_pc = (memaddr) midwife;
 		processState.s_t9 = (memaddr) midwife;
 		processState.s_status = ALLOFF | TE | IM; /*Interrupts enabled, user-mode off, timer on*/
@@ -132,14 +136,33 @@ void midwife(){
 		/*Read the current block up to the next EOB/EOT marker and copy it to RAM starting at data 0 addr (buffer)*/
 		tape->d_command = READBLK;
 		
+		/*Wait for data read*/
+		status = SYSCALL(WAITIO, TAPEINT, asid-1, 0);
+		
+		/*Check status. If not ready, kill it*/
+		if(status != READY)
+		{
+			SYSCALL(TERMINATE,0,0,0);
+		}
+		
 		/*block for disk 0*/
 		SYSCALL(PASSEREN, (int)&diskSem,0,0);
 		
-		/*Find correct cylinder based on asid*/
+		/*Question: Find correct cylinder based on asid*/
+		/*Question: Command correct?*/
 		int command = (asid) << 8;
 		disk->d_command = command;
 		
-		/*write on disk??*/
+		/*Question: Write on disk? (5.4 Yellowbook)*/
+		
+		/*Wait for data write*/
+		status = SYSCALL(WAITIO, DISKINT, 0, 0);
+		
+		/*Check status. If not ready, kill it*/
+		if(status != READY)
+		{
+			SYSCALL(TERMINATE,0,0,0);
+		}
 		
 		/*unblock sema4*/
 		SYSCALL(VERHOGEN, (int)&diskSem,0,0);
@@ -162,6 +185,7 @@ void midwife(){
 
 state_t setStateAreas()
 {	
+	/*Question: Is it okay for this to be a helper function? Does the sequence from blue book matter*/
 	/*Init the U-proc's three (pgmTrap, TLB, and SYS/Bp) new processor state areas*/
 	state_t * newArea;
 	

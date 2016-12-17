@@ -10,6 +10,7 @@
 #include "../e/pcb.e"
 #include "../e/initProc.e"
 #include "../e/initial.e"
+#include "../e/sysSupport.e"
 #include "../e/asl.e"
 #include "../e/scheduler.e"
 #include "../e/exceptions.e"
@@ -44,7 +45,7 @@ void handleSyscall(){
 
 		break;
 		
-		case (GETTOD)
+		case (GETTOD):
 			
 			getTOD();
 		
@@ -67,15 +68,16 @@ void handleSyscall(){
  * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
 void writeTerminal(){
 	
-	int len = uProc->s_a2;
-	char *str = uProc->s_a1;
+	int i; /*define up here or throws error after for loop*/ 
+	int len = (int) uProc->s_a2;
+	char *str = (char *) uProc->s_a1;
 	
 	/*Get the device register for the terminal we will write to */
-	device_t* terminal = (device_t*) TERMDEV + ((asid-1) * DEVREGSIZE)
+	device_t* terminal = (device_t*) TERMDEV + ((asid-1) * DEVREGSIZE);
 	
 	/*It is an error to write to a terminal device from an address in ksegOS, request a SYS10 with a length
 	 * less than 0, or a length greater than 128. Any of these errors result in a terminate.*/
-	if(len < 0 || len > 128 || virtAddr <= (char*) OSEND) {
+	if(len < 0 || len > 128 || str <= (char*) OSEND) {
 		
 		terminate();
 		
@@ -89,7 +91,7 @@ void writeTerminal(){
 		/*Question: statusChange off?*/
 		
 		terminal->t_transm_command = command;
-		status = SYSCALL (WAITIO, TERMINT, asid-1, 0);
+		int status = SYSCALL (WAITIO, TERMINT, asid-1, 0);
 		
 		/*Question: statusChange on?*/
 		
@@ -98,6 +100,7 @@ void writeTerminal(){
 		{
 			i = i * -1; 
 		}
+	}
 	
 	uProc->s_v0 = i;
 	loadState(uProc);
@@ -109,15 +112,16 @@ void writeTerminal(){
  * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
 void writePrinter(){
 	
-	int len = uProc->s_a2;
-	char *str = uProc->s_a1;
+	int i; /*define up here or throws error after for loop*/ 
+	int len = (int) uProc->s_a2;
+	char *str = (char *) uProc->s_a1;
 	
 	/*Get the device register for the printer we will write to */
-	device_t* printer = (device_t*) PRNTDEV + ((asid-1) * DEVREGSIZE)
+	device_t* printer = (device_t*) PRNTDEV + ((asid-1) * DEVREGSIZE);
 	
 	/*It is an error to write to a printer device from an address in ksegOS, request a SYS10 with a length
 	 * less than 0, or a length greater than 128. Any of these errors result in a terminate.*/
-	if(len < 0 || len > 128 || virtAddr <= (char*) OSEND) {
+	if(len < 0 || len > 128 || str <= (char*) OSEND) {
 		
 		terminate();
 		
@@ -130,13 +134,14 @@ void writePrinter(){
 		printer->d_data0 = str[i];
 		printer->d_command = PRINTCHR;	
 		
-		status = SYSCALL (WAITIO, PRNTINT, asid-1, 0); /*wait*/
+		int status = SYSCALL (WAITIO, PRNTINT, asid-1, 0); /*wait*/
 		
 		/*if device status is not 1 (ready), negate for v0*/
 		if(status != READY)
 		{
 			i = i * -1; 
 		}
+	}
 	
 	uProc->s_v0 = i;
 	loadState(uProc);

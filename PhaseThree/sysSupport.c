@@ -22,6 +22,9 @@
 int asid;
 state_t * uProc;
 
+
+/*******************Main Function***********************/
+
 /*Based on value in the calling uproc's a0, call the correct action*/
 void handleSyscall(){
 	

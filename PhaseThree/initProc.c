@@ -92,7 +92,7 @@ void test()
 		procs[i-1].Tp_sem = 0;
 		
 		/*Init the U-proc's segment table*/
-		segTbl = (segTbl_t *) STARTADDR + (i * 12); /*multiply by segtable width*/
+		segTbl = (segTbl_t *) STARTADDR + (i * SEGWIDTH); /*multiply by segtable width*/
 		segTbl->ksegOS = &KSegOS;
 		segTbl->kUseg2 = &(procs[i-1].Tp_pte);	
 			
@@ -101,7 +101,7 @@ void test()
 		processState.s_pc = (memaddr) midwife;
 		processState.s_t9 = (memaddr) midwife;
 		processState.s_status = ALLOFF | TE | IM; /*Interrupts enabled, user-mode off, timer on*/
-		processState.s_sp = TAPEBUFFSTART - (SYSSTACK + (2*(i-1)*PAGESIZE));/*set to the SYSCALL stack*/
+		processState.s_sp = TAPEBUFFSTART - (SYSSTACK + (SYSTRAP* PAGESIZE * (i-1)))); /*set to the SYSCALL stack*/
 			
 		/*Create the process (SYS 1)*/
 		SYSCALL(CREATEPROCESS,(int)&processState,0,0);
@@ -114,12 +114,25 @@ void test()
 /*Initialize u-proc by calling 3 SYS5's, reading in u-proc's .text and .data from the tape, and preparing for launch of u-proc*/
 void midwife(){
 	
+	/*Local vars*/
+	int asid;
+	int buffer;
+	int pageNum;
+	int status;
+	int oldStatus;
+	int command;
+	
+	state_t * newArea;
+	state_t processState;
+	device_t *tape;
+	device_t *disk;
+	
 	/*Who am I?*/
-	int asid = getENTRYHI();
+	asid = getENTRYHI();
 	asid = asid & MASKBIT >> 6; /*Mask what we dont need in register*/
 	
 	/*set up the state for process for "step 2" of u-proc initilization*/
-	state_t * newArea = setStateAreas();
+	newArea = setStateAreas();
 	
 	/*Perform the three SYS5 operations*/
 	for(int i =0; i < TRAPTYPES; i++)
@@ -128,11 +141,11 @@ void midwife(){
 	}
 		
 	/*Read the contents of tape device (asid-1) onto backing store (disk 0) until end*/
-	device_t *tape = (device_t*) TAPEDEV + ((asid-1) * DEVREGSIZE);
-	device_t *disk = (device_t*) DISKDEV;
-	int buffer = BUFFERSTART + ((asid-1) * PAGESIZE);
+	tape = (device_t*) TAPEDEV + ((asid-1) * DEVREGSIZE);
+	disk = (device_t*) DISKDEV;
+	buffer = BUFFERSTART + ((asid-1) * PAGESIZE);
 	
-	int pageNum = 0; /*Do the while loop write for each page*/
+	pageNum = 0; /*Do the while loop write for each page*/
 	
 	while((tape->d_data1 != EOT) && (tape-> d_data1 !=EOF)){
 		tape->d_data0 = buffer; /*Specify the starting physical address for a DMA read operation*/
@@ -141,17 +154,17 @@ void midwife(){
 		tape->d_command = READBLK;
 		
 		/*Wait*/
-		int status = SYSCALL(WAITIO, TAPEINT, asid-1, 0);
+		status = SYSCALL(WAITIO, TAPEINT, asid-1, 0);
 		
 		/*block for disk 0*/
 		SYSCALL(PASSEREN, (int)&diskSem,0,0);
 		
 		/*Turn off interrupts*/
-		int oldStatus = getSTATUS();
+		oldStatus = getSTATUS();
 		setSTATUS(ALLOFF);
 		
 		/*find cylinder/track*/
-		int command = pageNum << 8 | SEEKCYL;
+		command = pageNum << 8 | SEEKCYL;
 		disk->d_command = command;
 		
 		/*Wait*/
@@ -195,9 +208,8 @@ void midwife(){
 	}
 	
 	/*Set up process state*/
-	state_t processState;
-	processState.s_t9 = (memaddr) PAGE52ADDR;
 	processState.s_pc = (memaddr) PAGE52ADDR;
+	processState.s_t9 = (memaddr) PAGE52ADDR;
 	processState.s_sp = LASTSEG2PG;
 	processState.s_asid = getENTRYHI();	
 	processState.s_status = ALLOFF | TE | VMc | IM;
@@ -211,8 +223,11 @@ void midwife(){
 /*Init the U-proc's three (pgmTrap, TLB, and SYS/Bp) new processor state areas*/
 state_t * setStateAreas()
 {	
+	/*local vars*/
 	state_t * newArea;
-	int asid = getENTRYHI();
+	int asid;
+	
+	asid = getENTRYHI();
 	asid = asid & MASKBIT >> 6; /*Mask what we dont need in register*/
 	
 	for(int i = 0; i < TRAPTYPES; i++)
@@ -226,21 +241,21 @@ state_t * setStateAreas()
 		{
 			newArea->s_pc = (memaddr) pager;
 			newArea->s_t9 = (memaddr) pager;
-			newArea->s_sp = (TAPEBUFFSTART - (2 * (asid-1) * PAGESIZE));
+			newArea->s_sp = (TAPEBUFFSTART - (2 * (asid-1) * PAGESIZE)));
 		}
 		
 		else if (i == PROGTRAP)
 		{
 			newArea->s_pc = (memaddr) terminate; /*Not doing this in phase 3- kill it*/
 			newArea->s_t9 = (memaddr) terminate;
-			newArea->s_sp = (TAPEBUFFSTART - ((2 * (asid-1) * PAGESIZE) + (PAGESIZE * i)));
+			newArea->s_sp = (TAPEBUFFSTART - ((2 * (asid-1) * PAGESIZE) + (PAGESIZE * i))));
 		}
 		
 		else
 		{
 			newArea->s_pc = (memaddr) handleSyscall;
 			newArea->s_t9 = (memaddr) handleSyscall;
-			newArea->s_sp  = (TAPEBUFFSTART - ((2 * (asid-1) * PAGESIZE) + (PAGESIZE * i)));
+			newArea->s_sp  = (TAPEBUFFSTART - ((2 * (asid-1) * PAGESIZE) + (PAGESIZE * i))));
 		}
 		
 	}

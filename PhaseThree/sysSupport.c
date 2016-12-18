@@ -71,12 +71,19 @@ void handleSyscall(){
  * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
 void writeTerminal(){
 	
-	int i; /*define up here or throws error after for loop*/ 
+	/*local vars*/
+	int i;
+	int command;
+	int status;
+	int oldStatus;
+	
+	device_t* terminal;
+	
 	int len = (int) uProc->s_a2;
 	char *str = (char *) uProc->s_a1;
 	
 	/*Get the device register for the terminal we will write to */
-	device_t* terminal = (device_t*) TERMDEV + ((asid-1) * DEVREGSIZE);
+	terminal = (device_t*) TERMDEV + ((asid-1) * DEVREGSIZE);
 	
 	/*It is an error to write to a terminal device from an address in ksegOS, request a SYS10 with a length
 	 * less than 0, or a length greater than 128. Any of these errors result in a terminate.*/
@@ -87,16 +94,17 @@ void writeTerminal(){
 	}
 
 	/*For each character give the transmit command to the terminal*/
-	for (int i = 0; i < len; i++){
+	for (i = 0; i < len; i++){
 		
-		int command = (str[i] << 8) | TRANSMITCHAR; /*page 47 yellow*/
+		command = (str[i] << 8) | TRANSMITCHAR; /*page 47 yellow*/
 		
-		/*Question: statusChange off?*/
+		oldStatus = getSTATUS(); /*turn off interrupts*/
+		setSTATUS(ALLOFF);
 		
 		terminal->t_transm_command = command;
-		int status = SYSCALL (WAITIO, TERMINT, asid-1, 0);
+		status = SYSCALL (WAITIO, TERMINT, asid-1, 0);
 		
-		/*Question: statusChange on?*/
+		setSTATUS(oldStatus);
 		
 		/*if terminal status is not 5 (character transmitted), negate for v0*/
 		if((status &  0x0F) != CHARTRANS)
@@ -115,12 +123,17 @@ void writeTerminal(){
  * of chars transmitted is put into v0, o.w the negative status value is put in v0*/
 void writePrinter(){
 	
-	int i; /*define up here or throws error after for loop*/ 
+	/*local vars*/
+	int i;
+	int status;
+	
+	device_t* printer;
+	
 	int len = (int) uProc->s_a2;
 	char *str = (char *) uProc->s_a1;
 	
 	/*Get the device register for the printer we will write to */
-	device_t* printer = (device_t*) PRNTDEV + ((asid-1) * DEVREGSIZE);
+	printer = (device_t*) PRNTDEV + ((asid-1) * DEVREGSIZE);
 	
 	/*It is an error to write to a printer device from an address in ksegOS, request a SYS10 with a length
 	 * less than 0, or a length greater than 128. Any of these errors result in a terminate.*/
@@ -131,13 +144,13 @@ void writePrinter(){
 	}
 
 	/*For each character give the transmit command to the terminal*/
-	for (int i = 0; i < len; i++){
+	for (i = 0; i < len; i++){
 		
 		/*Give command and load character into data0*/
 		printer->d_data0 = str[i];
 		printer->d_command = PRINTCHR;	
 		
-		int status = SYSCALL (WAITIO, PRNTINT, asid-1, 0); /*wait*/
+		status = SYSCALL (WAITIO, PRNTINT, asid-1, 0); /*wait*/
 		
 		/*if device status is not 1 (ready), negate for v0*/
 		if(status != READY)

@@ -212,6 +212,7 @@
 #define GLOBALON 	0x00000100
 #define VALIDON 	0x00000200
 #define MASKBIT 	0x00000FC0
+#define PAGEMASK 	0x3ffff00
 
 /*YellowBook page 40 const*/
 #define EOT 	0

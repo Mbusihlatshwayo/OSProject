@@ -52,7 +52,7 @@ void pager(){
 	
 	/*Find seg # and page #s*/
 	segment = uProc->s_asid >> 30; 
-	missingPage = (uProc->s_asid & 0x3ffff00) >> 12;
+	missingPage = (uProc->s_asid & PAGEMASK) >> 12;
 	pageNumber = swapTables[framePick].sw_pageNo;
 	
 	/*Perform P on swapSem (Gain mutual exclusion)*/

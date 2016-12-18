@@ -40,6 +40,7 @@ int sema4array[DEVICELISTNUM * DEVICENUM];
 pteOS_t KSegOS;
 
 /*******************Main Function***********************/
+
 /*Initialize the VM-support level global vars including the u-procs.*/
 void test()
 {
@@ -167,7 +168,7 @@ void midwife(){
 		
 		/*write to disk*/
 		disk->d_data0 = buffer;
-		command = (HEADLOC << 8 | pageNum) | WRITEBLK;
+		command = (((HEADLOC << 8) | pageNum) << 8) | WRITEBLK;
 		
 		/*turn off interrupts*/
 		oldStatus = getSTATUS();
@@ -204,6 +205,9 @@ void midwife(){
 	LDST(&processState);
 	
 }
+
+/*******************Helper Functions********************/
+
 /*Init the U-proc's three (pgmTrap, TLB, and SYS/Bp) new processor state areas*/
 state_t * setStateAreas()
 {	

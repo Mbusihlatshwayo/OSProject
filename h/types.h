@@ -6,7 +6,7 @@
  * This header file contains utility types definitions.
  * 
  ****************************************************************************/
-
+#include "../h/const.h"
 
 typedef signed int cpu_t;
 
@@ -92,7 +92,53 @@ typedef struct semd_t {
 	pcb_t *s_procQ; /* tail pointer to a process queue */
 } semd_t;
 
+typedef struct pteEntry_t {
+     unsigned int    pte_entryHI;
+     unsigned int    pte_entryLO;
+} pteEntry_t;
 
+
+typedef struct pte_t {
+     int         header;
+     pteEntry_t    pteTable[KUSEGPTESIZE];
+} pte_t;
+
+
+typedef struct pteOS_t {
+     int         header;
+     pteEntry_t    pteTable[KUSEGOSSIZE ];
+} pteOS_t;
+
+
+typedef struct segTbl_t {
+     pteOS_t            *ksegOS;
+     pte_t            *kUseg2;
+     pte_t            *kUseg3;
+} segTbl_t;
+
+
+/* Tprocess information structure type */
+typedef struct Tproc_t {
+     int            Tp_sem;                    /* private semaphore    
+         */
+     pte_t        Tp_pte;                    /* page table (kUseg2)    
+         */
+     int            Tp_bckStoreAddr;        /* sector # for seg2 drum 
+area  */
+     state_t        Told_trap[TRAPTYPES];    /* saveareas for old 
+states        */
+     state_t        Tnew_trap[TRAPTYPES];    /* new state for trap 
+handling    */
+} Tproc_t;
+
+
+/* Page swap pool information structure type */
+typedef struct swap_t {
+     int            sw_asid;        /* ASID number            */
+     int            sw_segNo;        /* page's virt seg. no.    */
+     int            sw_pageNo;        /* page's virt page no.    */
+     pteEntry_t    *sw_pte;        /* page's PTE entry.    */
+} swap_t;
 
 #define	s_at	s_reg[0]
 #define	s_v0	s_reg[1]

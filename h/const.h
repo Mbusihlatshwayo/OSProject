@@ -33,6 +33,11 @@
 #define WAITCLOCK 7 
 #define WAITIO 8
 
+#define WRITETERMINAL 10
+#define WRITEPRINTER 16
+#define GETTOD 17
+#define TERMINATE 18
+
 
 /* timer, timescale, TOD-LO and other bus regs */
 #define RAMBASEADDR	0x10000000
@@ -105,8 +110,14 @@
 #define BUSY		3
 
 /* device common COMMAND codes */
-#define RESET		0
-#define ACK		1
+#define RESET			0
+#define ACK				1
+#define READBLK 		3
+#define CHARTRANS		5
+#define PRINTCHR 		2
+#define TRANSMITCHAR 	2
+#define SEEKCYL			2
+#define WRITEBLK 		4
 
 /* operations */
 #define	MIN(A,B)	((A) < (B) ? A : B)
@@ -163,6 +174,52 @@
 #define WORD_2 0x10000044
 #define WORD_3 0x10000048
 #define WORD_4 0x1000004C
+
+/*Phase 3 constants*/
+#define MAXPAGEPROCS 8
+#define SWAPPAGES 24
+#define SEGWIDTH 12
+#define KUSEGPTESIZE 32
+#define KUSEGOSSIZE 64
+#define MAGICNUMBER 0x2A /*42*/
+#define DISKCOUNT 8
+#define TAPECOUNT 8
+#define HEADLOC   0
+#define TLBL 	  2
+#define TLBS	  3
+
+#define OSEND (PAGESIZE * KUSEGOSSIZE)
+#define KSEGEND (ROMPAGESTART + OSEND)
+#define BUFFERSTART (KSEGEND - (DISKCOUNT * PAGESIZE))
+#define TAPEBUFFSTART (OSEND - ((TAPECOUNT * PAGESIZE) + (DISKCOUNT* PAGESIZE))
+#define SYSSTACK (PAGESIZE * SYSTRAP)
+
+#define TAPEDEV (((TAPEINT-3) * DEVREGSIZE * DEVPERINT) + DEVICEREGS)
+#define DISKDEV (((DISKINT-3) * DEVREGSIZE * DEVPERINT) + DEVICEREGS)
+#define TERMDEV (((TERMINT-3) * DEVREGSIZE * DEVPERINT) + DEVICEREGS)
+#define PRNTDEV (((PRNTINT-3) * DEVREGSIZE * DEVPERINT) + DEVICEREGS)
+
+/*Phase 3 Addresses*/
+#define STARTADDR 0x20000500
+#define SEGOSADDR 0x2000
+#define SEGTWOADDR 0x8000
+#define LASTADDR 0xBFFFF
+#define PAGE52ADDR 0x8000000B
+#define LASTSEG2PG 0xC0000000
+#define DEVICEREGS 0x10000050
+
+/*Bits for Phase 3*/
+#define DIRTYON 0x00000400
+#define GLOBALON 0x00000100
+#define VALIDON 0x00000200
+#define MASKBIT 0x00000FC0
+
+/*YellowBook page 40 const*/
+#define EOT 0
+#define EOF 1
+#define EOB 2
+#define TS 3
+
 
 
 /*-------------------------------------------------------------------*/

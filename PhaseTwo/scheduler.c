@@ -59,3 +59,7 @@ void scheduler(){
 		loadState(&(currentProcess->p_s));
 	}
 }
+
+
+
+

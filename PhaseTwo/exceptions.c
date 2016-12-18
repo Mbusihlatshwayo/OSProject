@@ -239,7 +239,7 @@ void createProcess(state_t *statep) {
 void terminateProcess(pcb_t *p)
 
 {
-	/*call SYS2 recursively in order to get rid all children*/
+	/*call SYS2 recursively in order to get rid of all children*/
 	while(!emptyChild(p)){
 
 		terminateProcess(removeChild(p));
